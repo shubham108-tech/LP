@@ -2,6 +2,7 @@ import Sidebar from './Sidebar';
 import { Outlet } from 'react-router-dom';
 import { useState } from 'react';
 import { RiMenuLine } from 'react-icons/ri';
+import Notifications from './Notifications';
 
 const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -13,9 +14,12 @@ const Layout = () => {
                 <div className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
                     LibraryPro
                 </div>
-                <button onClick={() => setIsSidebarOpen(true)} className="text-gray-300 hover:text-white">
-                    <RiMenuLine size={24} />
-                </button>
+                <div className="flex items-center gap-4">
+                    <Notifications />
+                    <button onClick={() => setIsSidebarOpen(true)} className="text-gray-300 hover:text-white">
+                        <RiMenuLine size={24} />
+                    </button>
+                </div>
             </div>
 
             {/* Overlay */}
@@ -29,6 +33,11 @@ const Layout = () => {
             <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
             <div className={`flex-1 min-h-screen transition-all duration-300 md:ml-64 pt-16 md:pt-0`}>
+                {/* Desktop Header */}
+                <div className="hidden md:flex justify-end items-center px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-30">
+                    <Notifications />
+                </div>
+
                 <div className="p-4 md:p-8 max-w-7xl mx-auto">
                     <Outlet />
                     <div className="mt-12 text-center text-gray-400 text-sm">

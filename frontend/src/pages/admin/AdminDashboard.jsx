@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine } from 'react-icons/ri';
 import toast from 'react-hot-toast';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import Leaderboard from '../../components/Leaderboard';
 
 const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
     <div className="p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center">
@@ -87,6 +88,9 @@ const AdminDashboard = () => {
                     <span>Download Report</span>
                 </button>
             </div>
+
+            {/* Leaderboard */}
+            <Leaderboard />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

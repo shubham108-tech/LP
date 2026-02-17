@@ -63,7 +63,11 @@ app.use('/api/exams', examRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/engagement', engagementRoutes);
+const notificationRoutes = require('./routes/notificationRoutes');
+const notificationController = require('./controllers/notificationController'); // For cron or triggers
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/gamification', require('./routes/gamificationRoutes'));
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

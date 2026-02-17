@@ -40,7 +40,7 @@ const TeacherDashboard = () => {
     const [books, setBooks] = useState([]);
     const [myRequests, setMyRequests] = useState([]);
     const [myHistory, setMyHistory] = useState([]);
-    const [leaderboard, setLeaderboard] = useState([]);
+    const [leaderboard, setLeaderboard] = useState({ topReaders: [], examToppers: [] });
     const [myBadges, setMyBadges] = useState({ read_count: 0, badges: [] });
     const [wishlist, setWishlist] = useState([]); // Server-side wishlist
 
@@ -168,7 +168,7 @@ const TeacherDashboard = () => {
 
     const fetchLeaderboard = async () => {
         try {
-            const res = await api.get('/engagement/leaderboard');
+            const res = await api.get('/gamification/leaderboard');
             setLeaderboard(res.data);
         } catch (error) { console.error(error); }
     };
@@ -685,10 +685,12 @@ const TeacherDashboard = () => {
                         </div>
 
                         {/* Leaderboard Section */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm h-full">
+                        {/* Leaderboard Section */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Top Readers */}
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                                    <RiFireFill className="text-orange-500" /> Leaderboard
+                                    <RiBookOpenLine className="text-blue-500" /> Top Readers
                                 </h3>
 
                                 <div className="overflow-x-auto">
@@ -701,7 +703,7 @@ const TeacherDashboard = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                                            {leaderboard.map((user, index) => (
+                                            {leaderboard.topReaders?.map((user, index) => (
                                                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
                                                     <td className="px-6 py-4">
                                                         {index === 0 && <span className="text-2xl">🥇</span>}
@@ -722,10 +724,59 @@ const TeacherDashboard = () => {
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {leaderboard.length === 0 && (
+                                            {(!leaderboard.topReaders || leaderboard.topReaders.length === 0) && (
                                                 <tr>
                                                     <td colSpan="3" className="px-6 py-12 text-center text-gray-400">
                                                         No data available yet. Start reading!
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Exam Toppers */}
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                    <RiFireFill className="text-orange-500" /> Exam Toppers
+                                </h3>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                                        <thead className="bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                                            <tr>
+                                                <th className="px-6 py-4 w-12">Rank</th>
+                                                <th className="px-6 py-4">Student</th>
+                                                <th className="px-6 py-4 text-right">Total Score</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                            {leaderboard.examToppers?.map((user, index) => (
+                                                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                                    <td className="px-6 py-4">
+                                                        {index === 0 && <span className="text-2xl">🥇</span>}
+                                                        {index === 1 && <span className="text-2xl">🥈</span>}
+                                                        {index === 2 && <span className="text-2xl">🥉</span>}
+                                                        {index > 2 && <span className="font-bold text-gray-400">#{index + 1}</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-slate-600 flex items-center justify-center font-bold text-orange-600 dark:text-orange-400">
+                                                                {user.name.charAt(0)}
+                                                            </div>
+                                                            <span className="font-medium text-slate-800 dark:text-white">{user.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-bold text-orange-600 dark:text-orange-400">
+                                                        {user.total_score}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {(!leaderboard.examToppers || leaderboard.examToppers.length === 0) && (
+                                                <tr>
+                                                    <td colSpan="3" className="px-6 py-12 text-center text-gray-400">
+                                                        No exam data yet.
                                                     </td>
                                                 </tr>
                                             )}
