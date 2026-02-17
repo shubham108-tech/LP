@@ -117,7 +117,7 @@ const ExamsManager = () => {
                     setTimeLeft(0);
                     if (!completedRef.current) {
                         completedRef.current = true;
-                        if (onComplete) onComplete();
+                        if (onComplete) setTimeout(onComplete, 3000); // 3-second delay
                     }
                 }
             };
@@ -128,17 +128,25 @@ const ExamsManager = () => {
             return () => clearInterval(timer);
         }, [startTime]);
 
-        if (timeLeft === null || timeLeft === 0) return null;
+        if (timeLeft === null) return null;
 
         const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
         const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
         const seconds = Math.floor((timeLeft / 1000) % 60);
 
+        if (timeLeft === 0) {
+            return (
+                <div className="mt-2 text-center animate-pulse">
+                    <p className="text-sm font-bold text-blue-600">Starting...</p>
+                </div>
+            );
+        }
+
         return (
             <div className="mt-2 text-center">
                 <p className="text-xs text-slate-500 mb-1">Exam starts in:</p>
-                <div className="text-lg font-mono font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 inline-block">
+                <div className="text-lg font-mono font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 inline-block min-w-[120px]">
                     {days > 0 && <span>{days}d </span>}
                     <span>{hours.toString().padStart(2, '0')}:</span>
                     <span>{minutes.toString().padStart(2, '0')}:</span>
@@ -169,24 +177,34 @@ const ExamsManager = () => {
                     </div>
 
                     <div className="text-xs text-slate-400 mb-4">
-                        {new Date(exam.start_time).toLocaleString()}
+                        Date: {new Date(exam.start_time).toLocaleString()}
                     </div>
 
                     {exam.status === 'upcoming' && (
-                        <ExamCountdown startTime={exam.start_time} onComplete={fetchExams} />
+                        <div className="flex flex-col gap-2">
+                            <ExamCountdown startTime={exam.start_time} onComplete={fetchExams} />
+                            <button disabled className="w-full py-2 bg-slate-100 text-slate-400 border border-slate-200 rounded-lg font-bold cursor-not-allowed text-sm">
+                                Please Wait
+                            </button>
+                        </div>
                     )}
 
                     {exam.status === 'live' && (
                         <button
                             onClick={() => navigate(`/teacher/exams/${exam.id}`)}
-                            className="w-full py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-lg shadow-red-500/30 mt-2"
+                            className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg font-bold hover:shadow-lg hover:from-red-700 hover:to-rose-700 transition transform hover:-translate-y-0.5 mt-2"
                         >
-                            Start Exam
+                            Start Exam Now
                         </button>
                     )}
                     {exam.status === 'completed' && (
                         <span className="block text-center text-sm font-medium text-green-600 py-2 bg-green-50 rounded-lg border border-green-100">
                             Completed - Check Results
+                        </span>
+                    )}
+                    {exam.status === 'expired' && (
+                        <span className="block text-center text-sm font-medium text-gray-500 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                            Exam Expired
                         </span>
                     )}
                 </div>
