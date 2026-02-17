@@ -20,14 +20,16 @@ const StudentsManager = lazy(() => import('./pages/admin/StudentsManager'));
 // Teacher Pages
 const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
 const TeacherHistory = lazy(() => import('./pages/teacher/MyHistory'));
-const NotesManager = lazy(() => import('./pages/teacher/NotesManager')); // Lazy Load
-const AssignmentsManager = lazy(() => import('./pages/teacher/AssignmentsManager')); // Lazy Load
-const ExamsManager = lazy(() => import('./pages/teacher/ExamsManager')); // Lazy Load
-const ExamPortal = lazy(() => import('./pages/teacher/ExamPortal')); // Lazy Load
-const ScheduleManager = lazy(() => import('./pages/teacher/ScheduleManager')); // Lazy Load
-const AnalyticsDashboard = lazy(() => import('./pages/teacher/AnalyticsDashboard')); // Lazy Load
+const NotesManager = lazy(() => import('./pages/teacher/NotesManager'));
+const AssignmentsManager = lazy(() => import('./pages/teacher/AssignmentsManager'));
+const ExamsManager = lazy(() => import('./pages/teacher/ExamsManager'));
+const ExamPortal = lazy(() => import('./pages/teacher/ExamPortal'));
+const ScheduleManager = lazy(() => import('./pages/teacher/ScheduleManager'));
+const AnalyticsDashboard = lazy(() => import('./pages/teacher/AnalyticsDashboard'));
 const TeacherPerformance = lazy(() => import('./pages/admin/TeacherPerformance'));
-const ProfileSettings = lazy(() => import('./pages/ProfileSettings')); // Lazy Load
+const FeedbackManager = lazy(() => import('./pages/admin/FeedbackManager'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
+const Feedback = lazy(() => import('./pages/Feedback'));
 
 // Components
 import Layout from './components/Layout';
@@ -74,6 +76,7 @@ function App() {
                             <Route path="teachers" element={<TeachersManager />} />
                             <Route path="students" element={<StudentsManager />} />
                             <Route path="performance" element={<TeacherPerformance />} />
+                            <Route path="feedback" element={<FeedbackManager />} />
                             <Route path="profile" element={<ProfileSettings />} />
                         </Route>
 
@@ -87,6 +90,7 @@ function App() {
                             <Route path="exams" element={<ExamsManager />} />
                             <Route path="schedule" element={<ScheduleManager />} />
                             <Route path="analytics" element={<AnalyticsDashboard />} />
+                            <Route path="feedback" element={<Feedback />} />
                             <Route path="performance" element={<TeacherPerformance />} />
                             <Route path="profile" element={<ProfileSettings />} />
                         </Route>

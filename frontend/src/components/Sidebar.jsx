@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SERVER_URL } from '../config';
-import { RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine, RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine, RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine } from 'react-icons/ri';
+import { RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine, RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine, RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine, RiChat1Line } from 'react-icons/ri';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { user, logout } = useAuth();
@@ -17,6 +17,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: '/admin/teachers', icon: RiUserLine, label: 'Teachers' },
         { path: '/admin/students', icon: RiUserSmileLine, label: 'Students' },
         { path: '/admin/performance', icon: RiLineChartLine, label: 'Teacher Performance' },
+        { path: '/admin/feedback', icon: RiChat1Line, label: 'Feedback' },
     ];
 
     const teacherLinks = [
@@ -27,6 +28,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams' },
         { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Schedule' },
         { path: '/teacher/analytics', icon: RiBarChartGroupedLine, label: 'Analytics' },
+        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Help & Feedback' },
     ];
 
     // If HOD, add performance link to teacher views

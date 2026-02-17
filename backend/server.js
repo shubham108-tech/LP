@@ -63,6 +63,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/engagement', engagementRoutes);
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
