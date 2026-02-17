@@ -1,0 +1,15 @@
+{
+  "name": "library-system-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "node update_hosts.js && concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm run dev",
+    "install-deps": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "seed": "cd backend && node seed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

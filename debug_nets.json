@@ -1,0 +1,78 @@
+{
+  "Ethernet": [
+    {
+      "address": "fe80::2d37:44f3:e57c:b3c8",
+      "netmask": "ffff:ffff:ffff:ffff::",
+      "family": "IPv6",
+      "mac": "e8:cf:83:58:4e:b8",
+      "internal": false,
+      "cidr": "fe80::2d37:44f3:e57c:b3c8/64",
+      "scopeid": 10
+    },
+    {
+      "address": "172.16.248.81",
+      "netmask": "255.255.0.0",
+      "family": "IPv4",
+      "mac": "e8:cf:83:58:4e:b8",
+      "internal": false,
+      "cidr": "172.16.248.81/16"
+    }
+  ],
+  "VMware Network Adapter VMnet1": [
+    {
+      "address": "fe80::50d4:8fed:bf9c:d649",
+      "netmask": "ffff:ffff:ffff:ffff::",
+      "family": "IPv6",
+      "mac": "00:50:56:c0:00:01",
+      "internal": false,
+      "cidr": "fe80::50d4:8fed:bf9c:d649/64",
+      "scopeid": 4
+    },
+    {
+      "address": "192.168.207.1",
+      "netmask": "255.255.255.0",
+      "family": "IPv4",
+      "mac": "00:50:56:c0:00:01",
+      "internal": false,
+      "cidr": "192.168.207.1/24"
+    }
+  ],
+  "VMware Network Adapter VMnet8": [
+    {
+      "address": "fe80::7539:7b0e:6110:2ae2",
+      "netmask": "ffff:ffff:ffff:ffff::",
+      "family": "IPv6",
+      "mac": "00:50:56:c0:00:08",
+      "internal": false,
+      "cidr": "fe80::7539:7b0e:6110:2ae2/64",
+      "scopeid": 12
+    },
+    {
+      "address": "192.168.22.1",
+      "netmask": "255.255.255.0",
+      "family": "IPv4",
+      "mac": "00:50:56:c0:00:08",
+      "internal": false,
+      "cidr": "192.168.22.1/24"
+    }
+  ],
+  "Loopback Pseudo-Interface 1": [
+    {
+      "address": "::1",
+      "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "family": "IPv6",
+      "mac": "00:00:00:00:00:00",
+      "internal": true,
+      "cidr": "::1/128",
+      "scopeid": 0
+    },
+    {
+      "address": "127.0.0.1",
+      "netmask": "255.0.0.0",
+      "family": "IPv4",
+      "mac": "00:00:00:00:00:00",
+      "internal": true,
+      "cidr": "127.0.0.1/8"
+    }
+  ]
+}

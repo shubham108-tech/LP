@@ -1,0 +1,49 @@
+CREATE DATABASE IF NOT EXISTS library_db;
+USE library_db;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'teacher', 'student', 'hod') NOT NULL DEFAULT 'student',
+  phone_number VARCHAR(20),
+  otp VARCHAR(6),
+  otp_expiry DATETIME,
+  is_verified BOOLEAN DEFAULT FALSE,
+  profile_image VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS books (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  book_name VARCHAR(255) NOT NULL,
+  author VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'General',
+  total_quantity INT NOT NULL,
+  available_quantity INT NOT NULL,
+  image_url VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS book_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  book_id INT NOT NULL,
+  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS book_issues (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  book_id INT NOT NULL,
+  issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  return_date DATETIME,
+  returned BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
