@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -100,6 +100,54 @@ const ExamsManager = () => {
         }
     };
 
+    const ExamCountdown = ({ startTime, onComplete }) => {
+        const [timeLeft, setTimeLeft] = useState(null);
+        const completedRef = useRef(false);
+
+        useEffect(() => {
+            const calculateTimeLeft = () => {
+                const now = new Date();
+                const start = new Date(startTime);
+                const difference = +start - +now;
+
+                if (difference > 0) {
+                    setTimeLeft(difference);
+                    completedRef.current = false;
+                } else {
+                    setTimeLeft(0);
+                    if (!completedRef.current) {
+                        completedRef.current = true;
+                        if (onComplete) onComplete();
+                    }
+                }
+            };
+
+            calculateTimeLeft();
+            const timer = setInterval(calculateTimeLeft, 1000);
+
+            return () => clearInterval(timer);
+        }, [startTime]);
+
+        if (timeLeft === null || timeLeft === 0) return null;
+
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+        const seconds = Math.floor((timeLeft / 1000) % 60);
+
+        return (
+            <div className="mt-2 text-center">
+                <p className="text-xs text-slate-500 mb-1">Exam starts in:</p>
+                <div className="text-lg font-mono font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 inline-block">
+                    {days > 0 && <span>{days}d </span>}
+                    <span>{hours.toString().padStart(2, '0')}:</span>
+                    <span>{minutes.toString().padStart(2, '0')}:</span>
+                    <span>{seconds.toString().padStart(2, '0')}</span>
+                </div>
+            </div>
+        );
+    };
+
     // Student View Component (Simple List)
     const StudentView = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -120,16 +168,26 @@ const ExamsManager = () => {
                         <span>Marks: {exam.total_marks}</span>
                     </div>
 
+                    <div className="text-xs text-slate-400 mb-4">
+                        {new Date(exam.start_time).toLocaleString()}
+                    </div>
+
+                    {exam.status === 'upcoming' && (
+                        <ExamCountdown startTime={exam.start_time} onComplete={fetchExams} />
+                    )}
+
                     {exam.status === 'live' && (
                         <button
                             onClick={() => navigate(`/teacher/exams/${exam.id}`)}
-                            className="w-full py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition"
+                            className="w-full py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-lg shadow-red-500/30 mt-2"
                         >
                             Start Exam
                         </button>
                     )}
                     {exam.status === 'completed' && (
-                        <span className="block text-center text-sm font-medium text-green-600 py-2">Completed</span>
+                        <span className="block text-center text-sm font-medium text-green-600 py-2 bg-green-50 rounded-lg border border-green-100">
+                            Completed - Check Results
+                        </span>
                     )}
                 </div>
             ))}
