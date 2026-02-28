@@ -3,7 +3,24 @@ const db = require('../config/db');
 // Get all schedules
 exports.getSchedules = async (req, res) => {
     try {
-        const [schedules] = await db.query('SELECT * FROM schedules ORDER BY start_time ASC');
+        let query = 'SELECT * FROM schedules';
+        let params = [];
+        let conditions = [];
+
+        if (req.user.role === 'student') {
+            if (req.user.branch) {
+                conditions.push('(branch = ? OR branch = "General" OR branch IS NULL)');
+                params.push(req.user.branch);
+            }
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY start_time ASC';
+
+        const [schedules] = await db.query(query, params);
         res.json(schedules);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching schedules', error: error.message });
@@ -22,7 +39,7 @@ exports.createSchedule = async (req, res) => {
         await db.query(
             `INSERT INTO schedules (title, type, start_time, end_time, description, branch, created_by) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [title, type, start_time, end_time, description, branch, req.user.id]
+            [title, type, start_time, end_time, description, branch || 'General', req.user.id]
         );
 
         res.status(201).json({ message: 'Schedule created' });

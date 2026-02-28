@@ -198,9 +198,24 @@ const ExamsManager = () => {
                         </button>
                     )}
                     {exam.status === 'completed' && (
-                        <span className="block text-center text-sm font-medium text-green-600 py-2 bg-green-50 rounded-lg border border-green-100">
-                            Completed - Check Results
-                        </span>
+                        <div className="text-center mt-4">
+                            <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase mb-2 border border-green-200">
+                                Completed
+                            </span>
+                            {exam.my_score !== undefined && exam.my_score !== null ? (
+                                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                    <p className="font-bold text-slate-800 text-lg">
+                                        Your Score: <span className={exam.my_score >= exam.passing_marks ? "text-green-600" : "text-red-500"}>{exam.my_score}</span>
+                                        <span className="text-gray-400 text-sm">/{exam.total_marks}</span>
+                                    </p>
+                                    <p className={`text-xs font-bold mt-1 uppercase ${exam.my_score >= exam.passing_marks ? "text-green-600" : "text-red-500"}`}>
+                                        {exam.my_score >= exam.passing_marks ? "Passed" : "Failed"}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-500">Results Pending</p>
+                            )}
+                        </div>
                     )}
                     {exam.status === 'expired' && (
                         <span className="block text-center text-sm font-medium text-gray-500 py-2 bg-gray-50 rounded-lg border border-gray-200">

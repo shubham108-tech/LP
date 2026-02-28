@@ -15,6 +15,7 @@ exports.getExams = async (req, res) => {
             query = `
                 SELECT exams.*, 
                 (SELECT COUNT(*) FROM questions WHERE exam_id = exams.id) as question_count,
+                (SELECT score FROM exam_results WHERE exam_id = exams.id AND student_id = ?) as my_score,
                  CASE 
                     WHEN EXISTS (SELECT 1 FROM exam_results WHERE exam_id = exams.id AND student_id = ?) THEN 'completed'
                     WHEN NOW() < start_time THEN 'upcoming'
@@ -22,8 +23,11 @@ exports.getExams = async (req, res) => {
                     ELSE 'live'
                 END as status
                 FROM exams 
+                WHERE (branch = ? OR branch = "General" OR branch IS NULL)
                 ORDER BY start_time ASC`;
-            params.push(req.user.id);
+            params.push(req.user.id); // For my_score
+            params.push(req.user.id); // For status check
+            params.push(req.user.branch || '');
         } else if (req.user.role === 'teacher') {
             // Teachers: See ONLY their own exams
             query = `
@@ -62,10 +66,16 @@ exports.createExam = async (req, res) => {
             return res.status(400).json({ message: 'Title, Start Time and End Time are required' });
         }
 
+        // If teacher, force their branch
+        let finalBranch = branch;
+        if (req.user.role === 'teacher' && req.user.branch) {
+            finalBranch = req.user.branch;
+        }
+
         const result = await db.query(
             `INSERT INTO exams (title, description, duration_minutes, total_marks, passing_marks, start_time, end_time, branch, batch, division, class_group, created_by) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, description, duration_minutes, total_marks, passing_marks, start_time, end_time, branch, batch, division, class_group, req.user.id]
+            [title, description, duration_minutes, total_marks, passing_marks, start_time, end_time, finalBranch, batch, division, class_group, req.user.id]
         );
 
         res.status(201).json({ message: 'Exam created successfully', examId: result[0].insertId });

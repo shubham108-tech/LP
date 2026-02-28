@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { SERVER_URL } from '../../config';
 import toast from 'react-hot-toast';
 import {
@@ -9,6 +10,7 @@ import {
 } from 'react-icons/ri';
 
 const TeachersManager = () => {
+    const { user } = useAuth();
     // Data
     const [teachers, setTeachers] = useState([]);
     const [stats, setStats] = useState({ total: 0, active: 0, newThisMonth: 0 });
@@ -25,7 +27,7 @@ const TeachersManager = () => {
     const [teacherHistory, setTeacherHistory] = useState([]);
 
     // Forms
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'teacher' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'teacher', branch: '' });
     const [profileImage, setProfileImage] = useState(null);
     const [bulkFile, setBulkFile] = useState(null);
 
@@ -67,6 +69,13 @@ const TeachersManager = () => {
         }
     };
 
+    // HOD Branch Lock Helper
+    useEffect(() => {
+        if (showFormModal && user?.role === 'hod' && user?.branch) {
+            setFormData(prev => ({ ...prev, role: 'teacher', branch: user.branch }));
+        }
+    }, [showFormModal, user]);
+
     // --- Actions ---
 
     const handleManualRegister = async (e) => {
@@ -77,6 +86,7 @@ const TeachersManager = () => {
             data.append('email', formData.email);
             data.append('password', formData.password);
             data.append('role', formData.role);
+            if (formData.branch) data.append('branch', formData.branch);
             if (profileImage) {
                 data.append('profile_image', profileImage);
             }
@@ -86,7 +96,7 @@ const TeachersManager = () => {
             });
 
             toast.success(`${formData.role.toUpperCase()} added successfully`);
-            setFormData({ name: '', email: '', password: '', role: viewRole });
+            setFormData({ name: '', email: '', password: '', role: viewRole, branch: '' });
             setProfileImage(null);
             setShowFormModal(false);
             fetchTeachers();
@@ -122,7 +132,8 @@ const TeachersManager = () => {
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
-                role: formData.role
+                role: formData.role,
+                branch: formData.branch
             });
             toast.success('Teacher updated');
             setShowEditModal(false);
@@ -145,7 +156,7 @@ const TeachersManager = () => {
 
     const openEdit = (teacher) => {
         setSelectedTeacher(teacher);
-        setFormData({ name: teacher.name, email: teacher.email, password: '', role: viewRole });
+        setFormData({ name: teacher.name, email: teacher.email, password: '', role: viewRole, branch: teacher.branch || '' });
         setShowEditModal(true);
     };
 
@@ -167,18 +178,21 @@ const TeachersManager = () => {
                         <button
                             onClick={() => setViewRole('teacher')}
                             className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewRole === 'teacher' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            disabled={user?.role === 'hod'} // HODs only see teachers
                         >
                             Teachers
                         </button>
-                        <button
-                            onClick={() => setViewRole('hod')}
-                            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewRole === 'hod' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            HODs
-                        </button>
+                        {user?.role !== 'hod' && (
+                            <button
+                                onClick={() => setViewRole('hod')}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${viewRole === 'hod' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                HODs
+                            </button>
+                        )}
                     </div>
                     <button
-                        onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '', role: viewRole }); setBulkFile(null); }}
+                        onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '', role: viewRole, branch: '' }); setBulkFile(null); }}
                         className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition font-medium"
                     >
                         <RiAddLine size={20} /> Add {viewRole === 'teacher' ? 'Teacher' : 'HOD'}
@@ -233,6 +247,7 @@ const TeachersManager = () => {
                             <tr>
                                 <th className="px-6 py-4">{viewRole === 'teacher' ? 'Teacher Name' : 'HOD Name'}</th>
                                 <th className="px-6 py-4">Email Address</th>
+                                <th className="px-6 py-4">Department</th>
                                 <th className="px-6 py-4">Joined On</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
@@ -258,6 +273,7 @@ const TeachersManager = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-600">{teacher.email}</td>
+                                    <td className="px-6 py-4 text-slate-600 font-medium text-xs">{teacher.branch || 'General'}</td>
                                     <td className="px-6 py-4 text-slate-400 text-xs font-mono">{new Date(teacher.created_at).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
@@ -340,17 +356,37 @@ const TeachersManager = () => {
                                         <input type="password" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                                             value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required placeholder="••••••••" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700">Role</label>
-                                        <select
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            value={formData.role}
-                                            onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                        >
-                                            <option value="teacher">Teacher</option>
-                                            <option value="hod">HOD (Department Head)</option>
-                                        </select>
-                                    </div>
+                                    {user?.role !== 'hod' && (
+                                        <div className="space-y-2">
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                value={formData.role}
+                                                onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                            >
+                                                <option value="teacher">Teacher</option>
+                                                <option value="hod">HOD (Department Head)</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {(!user?.branch || user?.role !== 'hod') && (
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Department (Branch)</label>
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                value={formData.branch}
+                                                onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                                            >
+                                                <option value="">Select Department</option>
+                                                <option value="Computer Science">Computer Science</option>
+                                                <option value="Civil Engineering">Civil Engineering</option>
+                                                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                                <option value="Electronics & Comm">Electronics & Comm</option>
+                                                <option value="Electrical Engineering">Electrical Engineering</option>
+                                                <option value="General">General / All</option>
+                                            </select>
+                                        </div>
+                                    )}
                                     <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30">Create Account</button>
                                 </form>
                             )}
@@ -390,6 +426,22 @@ const TeachersManager = () => {
                                 >
                                     <option value="teacher">Teacher</option>
                                     <option value="hod">HOD (Department Head)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold text-slate-700 mb-1 block">Department (Branch)</label>
+                                <select
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={formData.branch || ''}
+                                    onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                                >
+                                    <option value="">Select Department</option>
+                                    <option value="Computer Science">Computer Science</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Electronics & Comm">Electronics & Comm</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="General">General / All</option>
                                 </select>
                             </div>
                             <div className="flex gap-3 pt-2">

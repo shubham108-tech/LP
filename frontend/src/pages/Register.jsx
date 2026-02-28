@@ -9,25 +9,42 @@ const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('student');
+    const [role, setRole] = useState('student'); // Default role
+    const [branch, setBranch] = useState('');
+    const [year, setYear] = useState('');
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
+
+    const branches = [
+        'Computer Science',
+        'Civil Engineering',
+        'Mechanical Engineering',
+        'Electronics & Comm',
+        'Electrical Engineering'
+    ];
+
+    const years = [
+        'First Year',
+        'Second Year',
+        'Third Year',
+        'Final Year'
+    ];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         // Basic validation
-        if (!name || !email || !password) {
-            toast.error('Please fill in all fields');
+        if (!name || !email || !password || !branch || !year) {
+            toast.error('Please fill in all fields including Branch and Year');
             setLoading(false);
             return;
         }
 
         try {
             console.log('Initiating registration for:', email);
-            const res = await api.post('/auth/register', { name, email, password, role });
+            const res = await api.post('/auth/register', { name, email, password, role, branch, year });
             console.log('Register Response:', res.data);
 
             if (res.data && res.data.registrationToken) {
@@ -95,6 +112,39 @@ const Register = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={loading}
                         />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-blue-100 mb-1">Branch</label>
+                            <select
+                                required
+                                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all text-white [&>option]:text-black"
+                                value={branch}
+                                onChange={(e) => setBranch(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="" disabled>Select Branch</option>
+                                {branches.map((b) => (
+                                    <option key={b} value={b}>{b}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-blue-100 mb-1">Year</label>
+                            <select
+                                required
+                                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all text-white [&>option]:text-black"
+                                value={year}
+                                onChange={(e) => setYear(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="" disabled>Select Year</option>
+                                {years.map((y) => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div>

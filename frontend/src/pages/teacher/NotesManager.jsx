@@ -19,6 +19,7 @@ const NotesManager = () => {
     // Search & Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSubject, setFilterSubject] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
 
 
     useEffect(() => {
@@ -37,8 +38,12 @@ const NotesManager = () => {
             result = result.filter(n => n.subject && n.subject.toLowerCase().includes(filterSubject.toLowerCase()));
         }
 
+        if (filterCategory) {
+            result = result.filter(n => n.category === filterCategory);
+        }
+
         setFilteredNotes(result);
-    }, [notes, searchTerm, filterSubject]);
+    }, [notes, searchTerm, filterSubject, filterCategory]);
 
     const fetchNotes = async () => {
         try {
@@ -163,6 +168,24 @@ const NotesManager = () => {
                         {subjects.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                     </select>
                 </div>
+                <div className="relative w-full md:w-64">
+                    <RiFilterLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <select
+                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white"
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                    >
+                        <option value="">All Categories</option>
+                        <option value="General">General</option>
+                        <option value="Lecture Notes">Lecture Notes</option>
+                        <option value="Lab Manual">Lab Manual</option>
+                        <option value="Project Report">Project Report</option>
+                        <option value="Question Paper">Question Paper</option>
+                        <option value="Research Paper">Research Paper</option>
+                        <option value="Seminar PPT">Seminar PPT</option>
+                        <option value="Placement Material">Placement Material</option>
+                    </select>
+                </div>
             </div>
 
             {showForm && (
@@ -179,7 +202,20 @@ const NotesManager = () => {
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <input type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} placeholder="e.g. Notes, Syllabus, Lab Manual" />
+                            <select
+                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white"
+                                value={formData.category}
+                                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                            >
+                                <option value="General">General</option>
+                                <option value="Lecture Notes">Lecture Notes</option>
+                                <option value="Lab Manual">Lab Manual</option>
+                                <option value="Project Report">Project Report</option>
+                                <option value="Question Paper">Question Paper</option>
+                                <option value="Research Paper">Research Paper</option>
+                                <option value="Seminar PPT">Seminar PPT</option>
+                                <option value="Placement Material">Placement Material</option>
+                            </select>
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Target Branch/Class</label>

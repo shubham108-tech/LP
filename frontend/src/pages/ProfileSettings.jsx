@@ -11,6 +11,8 @@ const ProfileSettings = () => {
         name: '',
         email: '',
         password: '',
+        branch: '',
+        year: '',
         profile_image: null
     });
     const [previewImage, setPreviewImage] = useState(null);
@@ -20,7 +22,9 @@ const ProfileSettings = () => {
             setFormData(prev => ({
                 ...prev,
                 name: user.name || '',
-                email: user.email || ''
+                email: user.email || '',
+                branch: user.branch || '',
+                year: user.year || ''
             }));
             if (user.profile_image) {
                 setPreviewImage(`${SERVER_URL}${user.profile_image}`);
@@ -48,6 +52,8 @@ const ProfileSettings = () => {
             const data = new FormData();
             data.append('name', formData.name);
             data.append('email', formData.email);
+            if (formData.branch) data.append('branch', formData.branch);
+            if (formData.year) data.append('year', formData.year);
             if (formData.password) {
                 data.append('password', formData.password);
             }
@@ -123,6 +129,8 @@ const ProfileSettings = () => {
                             required
                         />
                     </div>
+
+
 
                     {/* Password */}
                     <div className="space-y-2">

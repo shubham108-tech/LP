@@ -26,6 +26,7 @@ const ExamsManager = lazy(() => import('./pages/teacher/ExamsManager'));
 const ExamPortal = lazy(() => import('./pages/teacher/ExamPortal'));
 const ScheduleManager = lazy(() => import('./pages/teacher/ScheduleManager'));
 const AnalyticsDashboard = lazy(() => import('./pages/teacher/AnalyticsDashboard'));
+const TeacherNotices = lazy(() => import('./pages/teacher/TeacherNotices'));
 const TeacherPerformance = lazy(() => import('./pages/admin/TeacherPerformance'));
 const FeedbackManager = lazy(() => import('./pages/admin/FeedbackManager'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
@@ -90,6 +91,7 @@ function App() {
                             <Route path="exams" element={<ExamsManager />} />
                             <Route path="schedule" element={<ScheduleManager />} />
                             <Route path="analytics" element={<AnalyticsDashboard />} />
+                            <Route path="notices" element={<TeacherNotices />} />
                             <Route path="feedback" element={<Feedback />} />
                             <Route path="performance" element={<TeacherPerformance />} />
                             <Route path="profile" element={<ProfileSettings />} />

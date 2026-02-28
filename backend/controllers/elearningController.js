@@ -13,10 +13,18 @@ exports.getNotes = async (req, res) => {
         const params = [];
         const conditions = [];
 
-        // If teacher, show only their own notes
+        // If teacher, show only their own notes (unless they want to see all? Usually teachers manage their own)
         if (req.user.role === 'teacher') {
             conditions.push('notes.uploaded_by = ?');
             params.push(req.user.id);
+        } else if (req.user.role === 'student') {
+            // Students see notes for their branch or General
+            // Also optionally filter by year if we added year to notes (we haven't yet, but maybe in future)
+            // For now, filter by branch
+            if (req.user.branch) {
+                conditions.push('(notes.branch = ? OR notes.branch = "General" OR notes.branch IS NULL)');
+                params.push(req.user.branch);
+            }
         }
 
         // Simple filter logic (can be expanded)
@@ -158,9 +166,25 @@ exports.getAssignments = async (req, res) => {
         if (req.user.role === 'teacher') {
             query += ' WHERE assignments.created_by = ?';
             params.push(req.user.id);
+        } else if (req.user.role === 'student') {
+            // Enhanced query for students to see their submission status
+            query = `
+                SELECT a.*, u.name as creator_name, 
+                s.id as submission_id, s.file_url as submission_file, s.grade, s.feedback, s.submitted_at 
+                FROM assignments a 
+                LEFT JOIN users u ON a.created_by = u.id 
+                LEFT JOIN assignment_submissions s ON a.id = s.assignment_id AND s.student_id = ?
+            `;
+            params = [req.user.id];
+
+            if (req.user.branch) {
+                query += ' WHERE (a.branch = ? OR a.branch = "General" OR a.branch IS NULL)';
+                params.push(req.user.branch);
+            }
         }
 
-        query += ' ORDER BY due_date ASC';
+        const orderBy = req.user.role === 'student' ? 'ORDER BY a.due_date ASC' : 'ORDER BY assignments.due_date ASC';
+        query += ` ${orderBy}`;
 
         const [assignments] = await db.query(query, params);
         res.json(assignments);
@@ -178,9 +202,15 @@ exports.createAssignment = async (req, res) => {
             return res.status(400).json({ message: 'Title and due date are required' });
         }
 
+        // If teacher, force their branch
+        let finalBranch = branch;
+        if (req.user.role === 'teacher' && req.user.branch) {
+            finalBranch = req.user.branch;
+        }
+
         await db.query(
             'INSERT INTO assignments (title, description, due_date, subject, branch, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, description, due_date, subject, branch, req.user.id]
+            [title, description, due_date, subject, finalBranch, req.user.id]
         );
 
         res.status(201).json({ message: 'Assignment created successfully' });
@@ -283,5 +313,56 @@ exports.gradeSubmission = async (req, res) => {
         res.json({ message: 'Graded successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error grading submission', error: error.message });
+    }
+};
+
+// =======================
+// SCHEDULE CONTROLS
+// =======================
+
+exports.getSchedules = async (req, res) => {
+    try {
+        let query = 'SELECT * FROM schedules';
+        let params = [];
+        let conditions = [];
+
+        if (req.user.role === 'student') {
+            if (req.user.branch) {
+                conditions.push('(branch = ? OR branch = "General" OR branch IS NULL)');
+                params.push(req.user.branch);
+            }
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        const [schedules] = await db.query(query, params);
+        res.json(schedules);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching schedule' });
+    }
+};
+
+exports.createSchedule = async (req, res) => {
+    try {
+        const { title, type, start_time, end_time, description, branch } = req.body;
+        await db.query(
+            'INSERT INTO schedules (title, type, start_time, end_time, description, branch) VALUES (?, ?, ?, ?, ?, ?)',
+            [title, type, start_time, end_time, description, branch || null]
+        );
+        res.status(201).json({ message: 'Schedule created' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating schedule' });
+    }
+};
+
+exports.deleteSchedule = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('DELETE FROM schedules WHERE id = ?', [id]);
+        res.json({ message: 'Schedule deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting schedule' });
     }
 };

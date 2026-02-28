@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SERVER_URL } from '../config';
-import { RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine, RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine, RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine, RiChat1Line } from 'react-icons/ri';
+import { RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine, RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine, RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine, RiChat1Line, RiMailSendLine } from 'react-icons/ri';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { user, logout } = useAuth();
@@ -27,6 +27,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: '/teacher/assignments', icon: RiTaskLine, label: 'Assignments' },
         { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams' },
         { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Schedule' },
+        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices' },
         { path: '/teacher/analytics', icon: RiBarChartGroupedLine, label: 'Analytics' },
         { path: '/teacher/feedback', icon: RiChat1Line, label: 'Help & Feedback' },
     ];
@@ -34,9 +35,21 @@ const Sidebar = ({ isOpen, onClose }) => {
     // If HOD, add performance link to teacher views
     if (user?.role === 'hod') {
         teacherLinks.push({ path: '/teacher/performance', icon: RiLineChartLine, label: 'Teacher performance' });
+        teacherLinks.push({ path: '/admin/students', icon: RiUserSmileLine, label: 'My Students' });
     }
 
-    const links = user?.role === 'admin' ? adminLinks : teacherLinks;
+    const studentLinks = [
+        { path: '/teacher/dashboard', icon: RiBookLine, label: 'Browse Books' },
+        { path: '/teacher/history', icon: RiHistoryLine, label: 'My History' },
+        { path: '/teacher/notes', icon: RiFileTextLine, label: 'Study Materials' },
+        { path: '/teacher/assignments', icon: RiTaskLine, label: 'My Assignments' },
+        { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams' },
+        { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Class Schedule' },
+        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices' },
+        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Help & Feedback' },
+    ];
+
+    const links = user?.role === 'admin' ? adminLinks : (user?.role === 'student' ? studentLinks : teacherLinks);
 
     return (
         <div

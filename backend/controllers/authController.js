@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
 exports.createUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, branch, year } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please provide all details' });
@@ -47,23 +47,23 @@ exports.createUser = async (req, res) => {
 
         // Insert User Directly (Admin Action -> Auto Verified)
         const [result] = await db.query(
-            'INSERT INTO users (name, email, password, role, is_verified, profile_image) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, userRole, true, profileImage]
+            'INSERT INTO users (name, email, password, role, branch, year, is_verified, profile_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, userRole, branch || null, year || null, true, profileImage]
         );
 
         res.status(201).json({
             message: 'User created successfully',
-            user: { id: result.insertId, name, email, role: userRole, profile_image: profileImage }
+            user: { id: result.insertId, name, email, role: userRole, branch, year, profile_image: profileImage }
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error from create' });
     }
 };
 
 exports.register = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, branch, year } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please provide all details' });
@@ -88,7 +88,7 @@ exports.register = async (req, res) => {
         // Create a temporary token containing user data and OTP
         // Valid for 10 minutes
         const registrationToken = jwt.sign(
-            { name, email, password: hashedPassword, role: userRole, otp },
+            { name, email, password: hashedPassword, role: userRole, otp, branch, year },
             process.env.JWT_SECRET,
             { expiresIn: '10m' }
         );
@@ -134,7 +134,7 @@ exports.verifyOTP = async (req, res) => {
             return res.status(400).json({ message: 'Session expired or invalid. Please register again.' });
         }
 
-        const { name, email, password, role, otp: correctOtp } = decoded;
+        const { name, email, password, role, otp: correctOtp, branch, year } = decoded;
 
         // Verify OTP
         if (String(correctOtp) !== String(otp)) {
@@ -150,15 +150,15 @@ exports.verifyOTP = async (req, res) => {
 
             // User exists but is unverified. UPDATE instead of INSERT.
             await db.query(
-                'UPDATE users SET name=?, password=?, role=?, is_verified=?, created_at=NOW() WHERE id=?',
-                [name, password, role, true, existingUsers[0].id]
+                'UPDATE users SET name=?, password=?, role=?, branch=?, year=?, is_verified=?, created_at=NOW() WHERE id=?',
+                [name, password, role, branch, year, true, existingUsers[0].id]
             );
 
             const userId = existingUsers[0].id;
 
             // Generate Login Token
             const token = jwt.sign(
-                { id: userId, role: role, name: name },
+                { id: userId, role: role, name: name, branch: branch, year: year },
                 process.env.JWT_SECRET,
                 { expiresIn: '1d' }
             );
@@ -166,21 +166,21 @@ exports.verifyOTP = async (req, res) => {
             return res.json({
                 message: 'Email verified and account created successfully',
                 token,
-                user: { id: userId, name, email, role }
+                user: { id: userId, name, email, role, branch, year }
             });
         }
 
         // INSERT USER INTO DATABASE NOW
         const [result] = await db.query(
-            'INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, ?, ?)',
-            [name, email, password, role, true]
+            'INSERT INTO users (name, email, password, role, branch, year, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [name, email, password, role, branch, year, true]
         );
 
         const userId = result.insertId;
 
         // Generate Login Token
         const token = jwt.sign(
-            { id: userId, role: role, name: name },
+            { id: userId, role: role, name: name, branch, year },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
@@ -188,7 +188,7 @@ exports.verifyOTP = async (req, res) => {
         res.json({
             message: 'Email verified and account created successfully',
             token,
-            user: { id: userId, name, email, role }
+            user: { id: userId, name, email, role, branch, year }
         });
 
     } catch (error) {
@@ -289,7 +289,7 @@ exports.login = async (req, res) => {
         // }
 
         const token = jwt.sign(
-            { id: user.id, role: user.role, name: user.name },
+            { id: user.id, role: user.role, name: user.name, branch: user.branch, year: user.year },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
@@ -301,6 +301,8 @@ exports.login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                branch: user.branch,
+                year: user.year,
                 profile_image: user.profile_image
             }
         });
@@ -313,7 +315,18 @@ exports.login = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
     try {
         const role = req.query.role || 'teacher';
-        const [users] = await db.query('SELECT id, name, email, role, created_at, profile_image FROM users WHERE role = ? ORDER BY created_at DESC', [role]);
+        let query = 'SELECT id, name, email, role, branch, year, created_at, profile_image FROM users WHERE role = ?';
+        let params = [role];
+
+        // HOD: Filter by branch
+        if (req.user.role === 'hod' && req.user.branch) {
+            query += ' AND (branch = ? OR branch IS NULL)';
+            params.push(req.user.branch);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const [users] = await db.query(query, params);
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -411,20 +424,26 @@ exports.bulkRegister = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, email, department, password, role } = req.body;
+    const { name, email, department, password, role, branch, year } = req.body;
 
     try {
+        const [existing] = await db.query('SELECT role FROM users WHERE id = ?', [id]);
+        if (existing.length === 0) return res.status(404).json({ message: 'User not found' });
+
+        // Preserve existing role if not provided
+        const newRole = role || existing[0].role;
+
         if (password && password.trim() !== '') {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
             await db.query(
-                'UPDATE users SET name = ?, email = ?, password = ?, role = ? WHERE id = ?',
-                [name, email, hashedPassword, role || 'teacher', id]
+                'UPDATE users SET name = ?, email = ?, password = ?, role = ?, branch = ?, year = ? WHERE id = ?',
+                [name, email, hashedPassword, newRole, branch || null, year || null, id]
             );
         } else {
             await db.query(
-                'UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?',
-                [name, email, role || 'teacher', id]
+                'UPDATE users SET name = ?, email = ?, role = ?, branch = ?, year = ? WHERE id = ?',
+                [name, email, newRole, branch || null, year || null, id]
             );
         }
         res.json({ message: 'User updated successfully' });
@@ -435,7 +454,7 @@ exports.updateUser = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     const userId = req.user.id;
-    const { name, email, password } = req.body;
+    const { name, email, password, branch, year } = req.body;
 
     try {
         let profileImage = undefined;
@@ -456,6 +475,8 @@ exports.updateProfile = async (req, res) => {
 
         if (name) { updates.push('name = ?'); params.push(name); }
         if (email) { updates.push('email = ?'); params.push(email); }
+        if (branch) { updates.push('branch = ?'); params.push(branch); }
+        if (year) { updates.push('year = ?'); params.push(year); }
         if (profileImage) { updates.push('profile_image = ?'); params.push(profileImage); }
 
         if (password && password.trim() !== '') {
@@ -471,7 +492,7 @@ exports.updateProfile = async (req, res) => {
             await db.query(sql, params);
         }
 
-        const [users] = await db.query('SELECT id, name, email, role, profile_image FROM users WHERE id = ?', [userId]);
+        const [users] = await db.query('SELECT id, name, email, role, branch, year, profile_image FROM users WHERE id = ?', [userId]);
 
         res.json({
             message: 'Profile updated successfully',

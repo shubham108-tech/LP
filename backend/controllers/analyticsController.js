@@ -124,7 +124,7 @@ exports.getStudentAnalytics = async (req, res) => {
 exports.getHODAnalytics = async (req, res) => {
     try {
         // This query aggregates all teacher activities and student performance under them
-        const [teacherStats] = await db.query(`
+        let teacherQuery = `
             SELECT 
                 u.id, 
                 u.name, 
@@ -137,49 +137,64 @@ exports.getHODAnalytics = async (req, res) => {
                 (SELECT AVG(er.score) FROM exam_results er JOIN exams e ON er.exam_id = e.id WHERE e.created_by = u.id) as avg_student_score
             FROM users u
             WHERE u.role = 'teacher'
-            ORDER BY exam_count DESC
-        `);
+        `;
+
+        const teacherParams = [];
+        if (req.user.role === 'hod' && req.user.branch) {
+            teacherQuery += ' AND (u.branch = ? OR u.branch IS NULL)';
+            teacherParams.push(req.user.branch);
+        }
+        teacherQuery += ' ORDER BY exam_count DESC';
+
+        const [teacherStats] = await db.query(teacherQuery, teacherParams);
 
         // Recent Activity across all teachers
-        const [recentActivity] = await db.query(`
-            (SELECT 'exam' as type, title, created_at, (SELECT name FROM users WHERE id = created_by) as teacher_name FROM exams)
+        // Recent Activity
+        let activityQuery = `
+            (SELECT 'exam' as type, title, created_at, (SELECT name FROM users WHERE id = created_by) as teacher_name FROM exams ${req.user.role === 'hod' && req.user.branch ? 'WHERE branch = ?' : ''})
             UNION ALL
-            (SELECT 'note' as type, title, created_at, (SELECT name FROM users WHERE id = uploaded_by) as teacher_name FROM notes)
+            (SELECT 'note' as type, title, created_at, (SELECT name FROM users WHERE id = uploaded_by) as teacher_name FROM notes ${req.user.role === 'hod' && req.user.branch ? 'WHERE branch = ?' : ''})
             UNION ALL
-            (SELECT 'assignment' as type, title, created_at, (SELECT name FROM users WHERE id = created_by) as teacher_name FROM assignments)
+            (SELECT 'assignment' as type, title, created_at, (SELECT name FROM users WHERE id = created_by) as teacher_name FROM assignments ${req.user.role === 'hod' && req.user.branch ? 'WHERE branch = ?' : ''})
             ORDER BY created_at DESC
             LIMIT 10
-        `);
+        `;
+        const activityParams = req.user.role === 'hod' && req.user.branch ? [req.user.branch, req.user.branch, req.user.branch] : [];
+        const [recentActivity] = await db.query(activityQuery, activityParams);
+
+        // Common Branch Filter for Stats
+        const branchCondition = (req.user.role === 'hod' && req.user.branch) ? ' AND e.branch = ?' : '';
+        const branchParam = (req.user.role === 'hod' && req.user.branch) ? [req.user.branch] : [];
 
         // Batch Performance
         const [batchStats] = await db.query(`
             SELECT e.batch, AVG(er.score) as avg_score, COUNT(DISTINCT er.student_id) as student_count
             FROM exam_results er
             JOIN exams e ON er.exam_id = e.id
-            WHERE e.batch IS NOT NULL AND e.batch != ''
+            WHERE e.batch IS NOT NULL AND e.batch != ''${branchCondition}
             GROUP BY e.batch
             ORDER BY e.batch DESC
-        `);
+        `, branchParam);
 
         // Division Performance
         const [divisionStats] = await db.query(`
             SELECT e.division, AVG(er.score) as avg_score, COUNT(DISTINCT er.student_id) as student_count
             FROM exam_results er
             JOIN exams e ON er.exam_id = e.id
-            WHERE e.division IS NOT NULL AND e.division != ''
+            WHERE e.division IS NOT NULL AND e.division != ''${branchCondition}
             GROUP BY e.division
             ORDER BY e.division ASC
-        `);
+        `, branchParam);
 
         // Class Group Performance
         const [classGroupStats] = await db.query(`
             SELECT e.class_group, AVG(er.score) as avg_score, COUNT(DISTINCT er.student_id) as student_count
             FROM exam_results er
             JOIN exams e ON er.exam_id = e.id
-            WHERE e.class_group IS NOT NULL AND e.class_group != ''
+            WHERE e.class_group IS NOT NULL AND e.class_group != ''${branchCondition}
             GROUP BY e.class_group
             ORDER BY e.class_group ASC
-        `);
+        `, branchParam);
 
         res.json({
             teacherStats,

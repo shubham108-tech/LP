@@ -167,14 +167,38 @@ const AssignmentsManager = () => {
                                     {activeAssignment?.id === assign.id ? 'Hide Submissions' : 'View Submissions'}
                                 </button>
                             ) : (
-                                <div className="flex items-center gap-2">
-                                    <input type="file" className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" onChange={e => setFile(e.target.files[0])} />
-                                    <button
-                                        onClick={(e) => handleSubmit(assign.id, e)}
-                                        className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-medium flex items-center gap-1"
-                                    >
-                                        <RiUploadCloud2Line /> Submit
-                                    </button>
+
+                                <div>
+                                    {assign.submission_id ? (
+                                        <div className="text-right">
+                                            <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold mb-2">
+                                                Submitted on {new Date(assign.submitted_at).toLocaleDateString()}
+                                            </div>
+                                            {assign.grade ? (
+                                                <div className="text-sm">
+                                                    <p className="font-bold text-slate-700">Grade: <span className="text-blue-600 text-lg">{assign.grade}</span><span className="text-gray-400">/10</span></p>
+                                                    {assign.feedback && <p className="text-xs text-gray-500 mt-1 italic">"{assign.feedback}"</p>}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-slate-500 font-medium">Pending Review</p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative">
+                                                <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => setFile(e.target.files[0])} />
+                                                <button className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition">
+                                                    {file ? 'File Selected' : 'Select File'}
+                                                </button>
+                                            </div>
+                                            <button
+                                                onClick={(e) => handleSubmit(assign.id, e)}
+                                                className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm"
+                                            >
+                                                <RiUploadCloud2Line /> Submit
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -253,7 +277,7 @@ const AssignmentsManager = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -668,7 +668,7 @@ const TeacherDashboard = () => {
 
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Badges Earned</h4>
-                                    {myBadges.badges.length > 0 ? (
+                                    {myBadges.badges?.length > 0 ? (
                                         <div className="grid grid-cols-2 gap-3">
                                             {myBadges.badges.map((badge, idx) => (
                                                 <div key={idx} className="bg-emerald-50 dark:bg-slate-700 p-3 rounded-lg border border-emerald-100 dark:border-slate-600 flex flex-col items-center text-center">
@@ -724,7 +724,7 @@ const TeacherDashboard = () => {
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {(!leaderboard.topReaders || leaderboard.topReaders.length === 0) && (
+                                            {(!leaderboard.topReaders || leaderboard.topReaders?.length === 0) && (
                                                 <tr>
                                                     <td colSpan="3" className="px-6 py-12 text-center text-gray-400">
                                                         No data available yet. Start reading!
@@ -773,7 +773,7 @@ const TeacherDashboard = () => {
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {(!leaderboard.examToppers || leaderboard.examToppers.length === 0) && (
+                                            {(!leaderboard.examToppers || leaderboard.examToppers?.length === 0) && (
                                                 <tr>
                                                     <td colSpan="3" className="px-6 py-12 text-center text-gray-400">
                                                         No exam data yet.

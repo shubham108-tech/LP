@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
     RiAddLine, RiUploadCloud2Line, RiUserSearchLine, RiPencilLine,
@@ -24,7 +25,7 @@ const StudentsManager = () => {
     const [studentHistory, setStudentHistory] = useState([]);
 
     // Forms
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', branch: '', year: '' });
     const [bulkFile, setBulkFile] = useState(null);
 
     useEffect(() => {
@@ -54,6 +55,14 @@ const StudentsManager = () => {
         }
     };
 
+    // HOD Branch Lock Helper
+    const { user } = useAuth();
+    useEffect(() => {
+        if (showFormModal && user?.role === 'hod' && user?.branch) {
+            setFormData(prev => ({ ...prev, branch: user.branch }));
+        }
+    }, [showFormModal, user]);
+
     const fetchHistory = async (student) => {
         try {
             const res = await api.get(`/issues/history/${student.id}`);
@@ -70,13 +79,24 @@ const StudentsManager = () => {
     const handleManualRegister = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/auth/register', { ...formData, role: 'student' });
-            toast.success('Student registered successfully');
-            setFormData({ name: '', email: '', password: '' });
+            const data = new FormData();
+            data.append('name', formData.name);
+            data.append('email', formData.email);
+            data.append('password', formData.password);
+            data.append('role', 'student');
+            if (formData.branch) data.append('branch', formData.branch);
+            if (formData.year) data.append('year', formData.year);
+
+            await api.post('/auth/users', data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            toast.success('Student added successfully');
+            setFormData({ name: '', email: '', password: '', branch: '', year: '' });
             setShowFormModal(false);
             fetchStudents();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Registration failed');
+            toast.error(error.response?.data?.message || 'Failed to add student');
         }
     };
 
@@ -103,7 +123,13 @@ const StudentsManager = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.put(`/auth/users/${selectedStudent.id}`, { name: formData.name, email: formData.email });
+            await api.put(`/auth/users/${selectedStudent.id}`, {
+                name: formData.name,
+                email: formData.email,
+                branch: formData.branch,
+                year: formData.year,
+                role: 'student'
+            });
             toast.success('Student updated');
             setShowEditModal(false);
             fetchStudents();
@@ -125,7 +151,7 @@ const StudentsManager = () => {
 
     const openEdit = (student) => {
         setSelectedStudent(student);
-        setFormData({ name: student.name, email: student.email, password: '' });
+        setFormData({ name: student.name, email: student.email, password: '', branch: student.branch || '', year: student.year || '' });
         setShowEditModal(true);
     };
 
@@ -143,7 +169,7 @@ const StudentsManager = () => {
                     <p className="text-sm text-slate-500">Manage student accounts and history</p>
                 </div>
                 <button
-                    onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '' }); setBulkFile(null); }}
+                    onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '', branch: '', year: '' }); setBulkFile(null); }}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition font-medium"
                 >
                     <RiAddLine size={20} /> Register Student
@@ -197,6 +223,7 @@ const StudentsManager = () => {
                             <tr>
                                 <th className="px-6 py-4">Student Name</th>
                                 <th className="px-6 py-4">Email Address</th>
+                                <th className="px-6 py-4">Branch/Year</th>
                                 <th className="px-6 py-4">Joined</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
@@ -222,6 +249,12 @@ const StudentsManager = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-600">{student.email}</td>
+                                    <td className="px-6 py-4 text-slate-600">
+                                        <div className="flex flex-col text-xs">
+                                            <span className="font-bold">{student.branch || '-'}</span>
+                                            <span className="text-slate-400">{student.year || '-'}</span>
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4 text-slate-400 text-xs font-mono">{new Date(student.created_at).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
@@ -236,7 +269,7 @@ const StudentsManager = () => {
                                 </tr>
                             ))}
                             {filteredStudents.length === 0 && (
-                                <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400">No students found matching your search.</td></tr>
+                                <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400">No students found matching your search.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -287,6 +320,37 @@ const StudentsManager = () => {
                                         <input type="password" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                             value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required placeholder="••••••••" />
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Branch</label>
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={formData.branch}
+                                                onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                                            >
+                                                <option value="">Select Branch</option>
+                                                <option value="Computer Science">Computer Science</option>
+                                                <option value="Civil Engineering">Civil Engineering</option>
+                                                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                                <option value="Electronics & Comm">Electronics & Comm</option>
+                                                <option value="Electrical Engineering">Electrical Engineering</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Year</label>
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={formData.year}
+                                                onChange={e => setFormData({ ...formData, year: e.target.value })}
+                                            >
+                                                <option value="">Select Year</option>
+                                                <option value="First Year">First Year</option>
+                                                <option value="Second Year">Second Year</option>
+                                                <option value="Third Year">Third Year</option>
+                                                <option value="Final Year">Final Year</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">Create Account</button>
                                 </form>
                             )}
@@ -308,6 +372,37 @@ const StudentsManager = () => {
                             <div>
                                 <label className="text-sm font-bold text-slate-700 mb-1 block">Email</label>
                                 <input type="email" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Branch</label>
+                                    <select
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={formData.branch}
+                                        onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                                    >
+                                        <option value="">Select Branch</option>
+                                        <option value="Computer Science">Computer Science</option>
+                                        <option value="Civil Engineering">Civil Engineering</option>
+                                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                        <option value="Electronics & Comm">Electronics & Comm</option>
+                                        <option value="Electrical Engineering">Electrical Engineering</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Year</label>
+                                    <select
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={formData.year}
+                                        onChange={e => setFormData({ ...formData, year: e.target.value })}
+                                    >
+                                        <option value="">Select Year</option>
+                                        <option value="First Year">First Year</option>
+                                        <option value="Second Year">Second Year</option>
+                                        <option value="Third Year">Third Year</option>
+                                        <option value="Final Year">Final Year</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2 bg-gray-100 text-slate-600 rounded-lg hover:bg-gray-200 font-medium">Cancel</button>

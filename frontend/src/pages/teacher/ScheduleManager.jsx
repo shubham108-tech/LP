@@ -99,8 +99,20 @@ const ScheduleManager = () => {
                             <input type="datetime-local" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required value={formData.end_time} onChange={e => setFormData({ ...formData, end_time: e.target.value })} />
                         </div>
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Branch (Optional)</label>
-                            <input type="text" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value })} placeholder="e.g. CS-A" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Target Branch/Class</label>
+                            <select
+                                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                value={formData.branch}
+                                onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                            >
+                                <option value="">Select Branch (Optional)</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Civil Engineering">Civil Engineering</option>
+                                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                <option value="Electronics & Comm">Electronics & Comm</option>
+                                <option value="Electrical Engineering">Electrical Engineering</option>
+                                <option value="General">General / All</option>
+                            </select>
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -121,7 +133,7 @@ const ScheduleManager = () => {
                         <div className="grid grid-cols-1 gap-4">
                             {groupedSchedules[date].map(item => (
                                 <div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 flex justify-between items-center ${item.type === 'exam' ? 'border-l-red-500' :
-                                        item.type === 'event' ? 'border-l-green-500' : 'border-l-blue-500'
+                                    item.type === 'event' ? 'border-l-green-500' : 'border-l-blue-500'
                                     }`}>
                                     <div className="flex gap-4 items-center">
                                         <div className="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 rounded-lg text-slate-700">
@@ -134,7 +146,7 @@ const ScheduleManager = () => {
                                             <p className="text-sm text-slate-500">{item.description || 'No details provided.'}</p>
                                             <div className="flex gap-2 mt-1">
                                                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${item.type === 'exam' ? 'bg-red-100 text-red-600' :
-                                                        item.type === 'event' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                                                    item.type === 'event' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
                                                     }`}>{item.type}</span>
                                                 {item.branch && <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600">{item.branch}</span>}
                                             </div>
