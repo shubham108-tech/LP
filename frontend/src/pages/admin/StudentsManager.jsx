@@ -25,7 +25,7 @@ const StudentsManager = () => {
     const [studentHistory, setStudentHistory] = useState([]);
 
     // Forms
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', branch: '', year: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', branch: '', year: '', division: '' });
     const [bulkFile, setBulkFile] = useState(null);
 
     useEffect(() => {
@@ -86,13 +86,14 @@ const StudentsManager = () => {
             data.append('role', 'student');
             if (formData.branch) data.append('branch', formData.branch);
             if (formData.year) data.append('year', formData.year);
+            if (formData.division) data.append('division', formData.division);
 
             await api.post('/auth/users', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             toast.success('Student added successfully');
-            setFormData({ name: '', email: '', password: '', branch: '', year: '' });
+            setFormData({ name: '', email: '', password: '', branch: '', year: '', division: '' });
             setShowFormModal(false);
             fetchStudents();
         } catch (error) {
@@ -128,6 +129,7 @@ const StudentsManager = () => {
                 email: formData.email,
                 branch: formData.branch,
                 year: formData.year,
+                division: formData.division,
                 role: 'student'
             });
             toast.success('Student updated');
@@ -151,7 +153,7 @@ const StudentsManager = () => {
 
     const openEdit = (student) => {
         setSelectedStudent(student);
-        setFormData({ name: student.name, email: student.email, password: '', branch: student.branch || '', year: student.year || '' });
+        setFormData({ name: student.name, email: student.email, password: '', branch: student.branch || '', year: student.year || '', division: student.division || '' });
         setShowEditModal(true);
     };
 
@@ -169,7 +171,7 @@ const StudentsManager = () => {
                     <p className="text-sm text-slate-500">Manage student accounts and history</p>
                 </div>
                 <button
-                    onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '', branch: '', year: '' }); setBulkFile(null); }}
+                    onClick={() => { setShowFormModal(true); setFormData({ name: '', email: '', password: '', branch: '', year: '', division: '' }); setBulkFile(null); }}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition font-medium"
                 >
                     <RiAddLine size={20} /> Register Student
@@ -350,6 +352,19 @@ const StudentsManager = () => {
                                                 <option value="Final Year">Final Year</option>
                                             </select>
                                         </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700">Division</label>
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={formData.division}
+                                                onChange={e => setFormData({ ...formData, division: e.target.value })}
+                                            >
+                                                <option value="">Select Division</option>
+                                                <option value="A">Division A</option>
+                                                <option value="B">Division B</option>
+                                                <option value="C">Division C</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">Create Account</button>
                                 </form>
@@ -401,6 +416,19 @@ const StudentsManager = () => {
                                         <option value="Second Year">Second Year</option>
                                         <option value="Third Year">Third Year</option>
                                         <option value="Final Year">Final Year</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Division</label>
+                                    <select
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={formData.division}
+                                        onChange={e => setFormData({ ...formData, division: e.target.value })}
+                                    >
+                                        <option value="">Select Division</option>
+                                        <option value="A">Division A</option>
+                                        <option value="B">Division B</option>
+                                        <option value="C">Division C</option>
                                     </select>
                                 </div>
                             </div>

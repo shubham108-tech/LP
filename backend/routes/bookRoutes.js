@@ -5,7 +5,20 @@ const { authenticateToken, isAdmin } = require('../middleware/authMiddleware');
 
 const multer = require('multer');
 const diskUpload = require('../middleware/uploadMiddleware'); // For images
-const memoryUpload = multer({ storage: multer.memoryStorage() }); // For bulk files (PDF/Excel)
+const memoryUpload = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+        const ext = require('path').extname(file.originalname).toLowerCase();
+        if ((file.mimetype === 'application/pdf' && ext === '.pdf') ||
+            (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' && ext === '.xlsx') ||
+            (file.mimetype === 'application/vnd.ms-excel' && ext === '.xls') ||
+            (file.mimetype === 'text/csv' && ext === '.csv')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type! Only PDF, XLSX, XLS, and CSV are allowed.'), false);
+        }
+    }
+}); // For bulk files (PDF/Excel)
 
 // 10. router.get('/', authenticateToken, getAllBooks);
 // 11. router.post('/', authenticateToken, isAdmin, diskUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), addBook);

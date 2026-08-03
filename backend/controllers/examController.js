@@ -23,11 +23,12 @@ exports.getExams = async (req, res) => {
                     ELSE 'live'
                 END as status
                 FROM exams 
-                WHERE (branch = ? OR branch = "General" OR branch IS NULL)
+                WHERE branch = ? ` + (req.user.division ? 'AND division = ?' : '') + `
                 ORDER BY start_time ASC`;
             params.push(req.user.id); // For my_score
             params.push(req.user.id); // For status check
             params.push(req.user.branch || '');
+            if (req.user.division) params.push(req.user.division);
         } else if (req.user.role === 'teacher') {
             // Teachers: See ONLY their own exams
             query = `

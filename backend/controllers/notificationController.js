@@ -36,7 +36,7 @@ exports.markAsRead = async (req, res) => {
 // Send Group Notification (Teacher/Admin)
 exports.sendGroupNotification = async (req, res) => {
     try {
-        const { message, branch, year } = req.body;
+        const { message, branch, year, division } = req.body;
 
         if (!message) return res.status(400).json({ message: 'Message is required' });
 
@@ -65,6 +65,11 @@ exports.sendGroupNotification = async (req, res) => {
         if (year) {
             query += ' AND year = ?';
             params.push(year);
+        }
+
+        if (division) {
+            query += ' AND division = ?';
+            params.push(division);
         }
 
         const [students] = await db.query(query, params);

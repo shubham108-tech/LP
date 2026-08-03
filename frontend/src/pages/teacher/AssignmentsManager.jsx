@@ -9,8 +9,8 @@ const AssignmentsManager = () => {
     const { user } = useAuth();
     const [assignments, setAssignments] = useState([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ title: '', description: '', due_date: '', subject: '', branch: '' });
-    const [file, setFile] = useState(null); // For student submissions
+    const [formData, setFormData] = useState({ title: '', description: '', due_date: '', subject: '', branch: '', division: '' });
+    const [files, setFiles] = useState({}); // { [assignmentId]: File }
     const [submissions, setSubmissions] = useState([]); // For teachers to view submissions
     const [activeAssignment, setActiveAssignment] = useState(null); // Currently selected assignment for details
 
@@ -37,7 +37,7 @@ const AssignmentsManager = () => {
             await api.post('/elearning/assignments', formData);
             toast.success('Assignment created');
             setShowForm(false);
-            setFormData({ title: '', description: '', due_date: '', subject: '', branch: '' });
+            setFormData({ title: '', description: '', due_date: '', subject: '', branch: '', division: '' });
             fetchAssignments();
         } catch (error) {
             toast.error('Failed to create assignment');
@@ -46,17 +46,23 @@ const AssignmentsManager = () => {
 
     const handleSubmit = async (id, e) => {
         e.preventDefault();
-        if (!file) return toast.error('Please select a file');
+        const fileToUpload = files[id];
+        if (!fileToUpload) return toast.error('Please select a file');
 
         const data = new FormData();
-        data.append('file', file);
+        data.append('file', fileToUpload);
 
         try {
             await api.post(`/elearning/assignments/${id}/submit`, data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             toast.success('Submitted successfully');
-            setFile(null);
+            // Clear the file for this assignment
+            setFiles(prev => {
+                const newFiles = { ...prev };
+                delete newFiles[id];
+                return newFiles;
+            });
             // Refresh to update status if we were showing it
             fetchAssignments();
         } catch (error) {
@@ -133,6 +139,15 @@ const AssignmentsManager = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                             <input type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} placeholder="e.g. Physics" />
                         </div>
+                        <div className="md:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Target Division</label>
+                            <select className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={formData.division} onChange={e => setFormData({ ...formData, division: e.target.value })}>
+                                <option value="">All Divisions</option>
+                                <option value="A">Division A</option>
+                                <option value="B">Division B</option>
+                                <option value="C">Division C</option>
+                            </select>
+                        </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Instruction/Description</label>
                             <textarea className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="3" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Task details..." />
@@ -155,6 +170,7 @@ const AssignmentsManager = () => {
                                 <div className="flex gap-2 text-xs text-slate-500 mb-2">
                                     <span className="flex items-center gap-1"><RiTimeLine /> Due: {new Date(assign.due_date).toLocaleString()}</span>
                                     {assign.subject && <span className="px-2 py-0.5 bg-gray-100 rounded">{assign.subject}</span>}
+                                    {assign.division && <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded">Div: {assign.division}</span>}
                                 </div>
                                 <p className="text-gray-600 text-sm mb-4">{assign.description}</p>
                             </div>
@@ -186,9 +202,9 @@ const AssignmentsManager = () => {
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <div className="relative">
-                                                <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => setFile(e.target.files[0])} />
+                                                <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => setFiles({ ...files, [assign.id]: e.target.files[0] })} />
                                                 <button className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition">
-                                                    {file ? 'File Selected' : 'Select File'}
+                                                    {files[assign.id] ? 'File Selected' : 'Select File'}
                                                 </button>
                                             </div>
                                             <button

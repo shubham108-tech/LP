@@ -1,0 +1,11 @@
+Error: Route.get() requires a callback function but got a [object Undefined]
+    at Route.<computed> [as get] (D:\LB\backend\node_modules\express\lib\router\route.js:216:15)
+    at proto.<computed> [as get] (D:\LB\backend\node_modules\express\lib\router\index.js:521:19)
+    at Object.<anonymous> (D:\LB\backend\routes\stationaryRoutes.js:7:8)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)

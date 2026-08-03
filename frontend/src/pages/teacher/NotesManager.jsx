@@ -12,7 +12,7 @@ const NotesManager = () => {
     const [showForm, setShowForm] = useState(false);
 
     // Form States
-    const [formData, setFormData] = useState({ id: null, title: '', description: '', subject: '', branch: '', category: 'General', resource_type: 'file', video_url: '' });
+    const [formData, setFormData] = useState({ id: null, title: '', description: '', subject: '', branch: '', division: '', category: 'General', resource_type: 'file', video_url: '' });
     const [file, setFile] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
 
@@ -66,6 +66,7 @@ const NotesManager = () => {
         data.append('description', formData.description);
         data.append('subject', formData.subject);
         data.append('branch', formData.branch);
+        data.append('division', formData.division);
         data.append('category', formData.category);
         data.append('resource_type', formData.resource_type);
 
@@ -89,7 +90,7 @@ const NotesManager = () => {
             }
 
             setShowForm(false);
-            setFormData({ id: null, title: '', description: '', subject: '', branch: '', category: 'General', resource_type: 'file', video_url: '' });
+            setFormData({ id: null, title: '', description: '', subject: '', branch: '', division: '', category: 'General', resource_type: 'file', video_url: '' });
             setFile(null);
             setIsEditing(false);
             fetchNotes();
@@ -105,6 +106,7 @@ const NotesManager = () => {
             description: note.description,
             subject: note.subject,
             branch: note.branch,
+            division: note.division || '',
             category: note.category || 'General',
             resource_type: note.resource_type,
             video_url: note.video_url || ''
@@ -137,7 +139,7 @@ const NotesManager = () => {
                 </div>
                 {user.role !== 'student' && (
                     <button
-                        onClick={() => { setShowForm(!showForm); setIsEditing(false); setFormData({ id: null, title: '', description: '', subject: '', branch: '', category: 'General', resource_type: 'file', video_url: '' }); }}
+                        onClick={() => { setShowForm(!showForm); setIsEditing(false); setFormData({ id: null, title: '', description: '', subject: '', branch: '', division: '', category: 'General', resource_type: 'file', video_url: '' }); }}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
                     >
                         <RiFileAddLine /> Share Resource
@@ -221,6 +223,15 @@ const NotesManager = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Target Branch/Class</label>
                             <input type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value })} placeholder="e.g. CS-A" />
                         </div>
+                        <div className="md:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Target Division</label>
+                            <select className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={formData.division} onChange={e => setFormData({ ...formData, division: e.target.value })}>
+                                <option value="">All Divisions</option>
+                                <option value="A">Division A</option>
+                                <option value="B">Division B</option>
+                                <option value="C">Division C</option>
+                            </select>
+                        </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                             <textarea className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="3" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Brief description..." />
@@ -287,6 +298,7 @@ const NotesManager = () => {
                             {note.category && <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded">{note.category}</span>}
                             {note.subject && <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">{note.subject}</span>}
                             {note.branch && <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">{note.branch}</span>}
+                            {note.division && <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded">Div: {note.division}</span>}
                         </div>
 
                         <div className="pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400 mb-4">

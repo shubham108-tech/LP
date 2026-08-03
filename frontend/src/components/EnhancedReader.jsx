@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import {
     RiCloseLine, RiPencilLine, RiFontSize, RiPaletteLine,
@@ -6,14 +6,15 @@ import {
     RiMoonLine, RiContrastDropLine, RiFocus2Line, RiTimerLine,
     RiMessage3Line, RiSendPlaneFill, RiZoomInLine, RiZoomOutLine,
     RiArrowRightUpLine, RiBrushLine, RiSave3Line, RiArrowGoBackLine,
-    RiDropLine
+    RiDropLine, RiVolumeUpLine, RiPauseCircleLine, RiStopCircleLine,
+    RiSettings3Line, RiTranslate2, RiSkipBackLine, RiSkipForwardLine
 } from 'react-icons/ri';
+import toast from 'react-hot-toast';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 // Set worker path
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], postMessage }) => {
     const [numPages, setNumPages] = useState(null);
     const [pageNumber, setPageNumber] = useState(1);
@@ -28,6 +29,65 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
     const [opacity, setOpacity] = useState(100);
     const [drawings, setDrawings] = useState({}); // { [page]: [paths] }
     const [isSaved, setIsSaved] = useState(true);
+    const [audioState, setAudioState] = useState('idle'); // 'idle', 'playing', 'paused'
+    const synth = window.speechSynthesis;
+
+    const [pdfDocument, setPdfDocument] = useState(null);
+    const [voices, setVoices] = useState([]);
+    const [selectedVoiceURI, setSelectedVoiceURI] = useState('');
+    const [audioRate, setAudioRate] = useState(1);
+    const [audioPitch, setAudioPitch] = useState(1);
+    const [autoTranslate, setAutoTranslate] = useState(true);
+    const [targetLang, setTargetLang] = useState('hi');
+    const targetLangRef = useRef('hi');
+    const autoTranslateRef = useRef(true);
+    const audioRateRef = useRef(1);
+    const audioPitchRef = useRef(1);
+    const selectedVoiceURIRef = useRef('');
+
+    const [showAudioSettings, setShowAudioSettings] = useState(false);
+    const utteranceRef = useRef(null);
+    const audioStateRef = useRef('idle'); // Keep track immediately for logic
+    const audioChunksRef = useRef([]);
+    const currentAudioChunkIndexRef = useRef(0);
+
+    const [showTranslation, setShowTranslation] = useState(false);
+    const [pageTranslationLang, setPageTranslationLang] = useState('hi');
+    const pageTranslationLangRef = useRef('hi');
+    const [translatedPageText, setTranslatedPageText] = useState('');
+    const [isTranslatingPage, setIsTranslatingPage] = useState(false);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            const availableVoices = window.speechSynthesis.getVoices();
+            setVoices(availableVoices);
+            if (!selectedVoiceURI && availableVoices.length > 0) {
+                const defaultVoice = availableVoices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+                    || availableVoices.find(v => v.lang.startsWith('en'))
+                    || availableVoices[0];
+                if (defaultVoice) setSelectedVoiceURI(defaultVoice.voiceURI);
+            }
+        };
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []); // Only run once for loading voices
+
+    // Sync refs
+    useEffect(() => {
+        targetLangRef.current = targetLang;
+        pageTranslationLangRef.current = pageTranslationLang;
+        autoTranslateRef.current = autoTranslate;
+        audioRateRef.current = audioRate;
+        audioPitchRef.current = audioPitch;
+        selectedVoiceURIRef.current = selectedVoiceURI;
+    }, [targetLang, pageTranslationLang, autoTranslate, audioRate, audioPitch, selectedVoiceURI]);
+
+    const fileObj = useMemo(() => ({
+        url: `${SERVER_URL}/${book.pdf_url}`,
+        httpHeaders: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    }), [SERVER_URL, book.pdf_url]);
 
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
@@ -53,7 +113,275 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
         if (scrollRef.current) {
             scrollRef.current.scrollTop = 0;
         }
+
+        // Stop audio when page changes
+        if (audioState !== 'idle' && synth) {
+            audioStateRef.current = 'idle';
+            synth.cancel();
+            if (window.speechInterval) clearInterval(window.speechInterval);
+            setAudioState('idle');
+        }
     }, [pageNumber]);
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            if (synth) synth.cancel();
+            if (window.speechInterval) clearInterval(window.speechInterval);
+        };
+    }, []);
+
+    // Page Translation Effect
+    useEffect(() => {
+        if (!showTranslation || !pdfDocument) return;
+
+        const translateCurrentPage = async () => {
+            setIsTranslatingPage(true);
+            try {
+                const page = await pdfDocument.getPage(pageNumber);
+                const textContent = await page.getTextContent();
+                const text = textContent.items.map(item => item.str).join(' ');
+
+                if (!text.trim()) {
+                    setTranslatedPageText('No readable text found on this page.');
+                    setIsTranslatingPage(false);
+                    return;
+                }
+
+                // Chunk text to avoid Translation API URI length limits
+                const chunks = text.match(/[\s\S]{1,1000}(?=\s|$)/g) || [text];
+                let fullTranslation = '';
+
+                for (let chunk of chunks) {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${pageTranslationLang}&dt=t&q=${encodeURIComponent(chunk.trim())}`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const translatedChunk = json[0].map(item => item[0]).join('');
+                        fullTranslation += translatedChunk + ' ';
+                    }
+                }
+                setTranslatedPageText(fullTranslation);
+            } catch (err) {
+                console.error('Page translation error', err);
+                setTranslatedPageText('Failed to translate page.');
+            }
+            setIsTranslatingPage(false);
+        };
+
+        translateCurrentPage();
+    }, [pageNumber, showTranslation, pageTranslationLang, pdfDocument]);
+
+    const speakCurrentChunk = async () => {
+        if (currentAudioChunkIndexRef.current >= audioChunksRef.current.length || audioStateRef.current !== 'playing') {
+            if (audioStateRef.current === 'playing') {
+                setAudioState('idle');
+                audioStateRef.current = 'idle';
+            }
+            return;
+        }
+
+        let chunkText = audioChunksRef.current[currentAudioChunkIndexRef.current].trim();
+        if (!chunkText) {
+            currentAudioChunkIndexRef.current++;
+            speakCurrentChunk();
+            return;
+        }
+
+        // Auto-Translate logic
+        let languageToSpeak = 'en'; // default
+        if (autoTranslateRef.current) {
+            let baseLang = targetLangRef.current !== 'auto' ? targetLangRef.current : pageTranslationLangRef.current;
+            languageToSpeak = baseLang;
+
+            if (baseLang && baseLang !== 'en') {
+                try {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${baseLang}&dt=t&q=${encodeURIComponent(chunkText)}`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const json = await res.json();
+                        chunkText = json[0].map(item => item[0]).join('');
+                    }
+                } catch (err) {
+                    console.error('Translation error', err);
+                }
+            }
+        }
+
+        if (audioStateRef.current !== 'playing') return; // User paused during translation
+
+        let safeChunkText = chunkText.replace(/[\#\*\_\`\[\]\(\)\|]/g, ' ').trim(); // Strip weird symbols
+        if (!safeChunkText) {
+            if (audioStateRef.current === 'playing') {
+                currentAudioChunkIndexRef.current++;
+                speakCurrentChunk();
+            }
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(safeChunkText);
+        const currentVoices = window.speechSynthesis.getVoices();
+        let selectedVoice = selectedVoiceURIRef.current ? currentVoices.find(v => v.voiceURI === selectedVoiceURIRef.current) : null;
+
+        // Crucial fix: Assign voice matching the language to avoid Synthesis-Failed
+        if (autoTranslateRef.current && languageToSpeak && languageToSpeak !== 'en') {
+
+            // 1. Did the user intentionally select a valid voice for this specific language?
+            if (selectedVoice && selectedVoice.lang.toLowerCase().startsWith(languageToSpeak.toLowerCase())) {
+                utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang;
+            } else {
+                // 2. Otherwise auto-find the first available compatible voice
+                let matchingVoice = currentVoices.find(v => v.lang.toLowerCase().startsWith(languageToSpeak.toLowerCase()));
+
+                // Fallback to Hindi voice for Devanagari scripts if native voice is missing
+                if (!matchingVoice && ['mr', 'gu', 'bn', 'ta', 'te', 'kn', 'ml'].includes(languageToSpeak)) {
+                    matchingVoice = currentVoices.find(v => v.lang.toLowerCase().startsWith('hi'));
+                }
+
+                // DO NOT fallback to a random default (English) voice for Hindi/regional text.
+                // Giving Devanagari script to an English voice causes "synthesis-failed" crash on Chrome/Edge.
+                if (matchingVoice) {
+                    utterance.voice = matchingVoice;
+                    utterance.lang = matchingVoice.lang; // Use the matched voice's explicit language
+                } else {
+                    // Let the browser decide natively based on the proper lang tag
+                    const langMap = { 'hi': 'hi-IN', 'mr': 'mr-IN', 'gu': 'gu-IN', 'ta': 'ta-IN', 'te': 'te-IN', 'bn': 'bn-IN', 'kn': 'kn-IN', 'ml': 'ml-IN' };
+                    utterance.lang = langMap[languageToSpeak] || languageToSpeak;
+                    // Leave utterance.voice null so browser relies strictly on utterance.lang
+                }
+            }
+        } else if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+        } else if (currentVoices.length > 0) {
+            utterance.voice = currentVoices[0]; // Extra safe fallback
+        }
+
+        utterance.rate = audioRateRef.current;
+
+        let finalPitch = audioPitchRef.current;
+        if (safeChunkText.includes('!')) finalPitch = Math.min(2, finalPitch + 0.2);
+        if (safeChunkText.includes('?')) finalPitch = Math.min(2, finalPitch + 0.1);
+        utterance.pitch = finalPitch;
+
+        utterance.onend = () => {
+            if (audioStateRef.current === 'playing') {
+                currentAudioChunkIndexRef.current++;
+                speakCurrentChunk();
+            }
+        };
+
+        utterance.onerror = (e) => {
+            console.error("Speech Synthesis Error:", e);
+            if (e.error !== 'canceled' && e.error !== 'interrupted') {
+                setAudioState('idle');
+                audioStateRef.current = 'idle';
+                toast.error(`Audio error: ${e.error}`);
+            }
+        };
+
+        utteranceRef.current = utterance; // Prevent GC
+
+        try {
+            synth.speak(utterance);
+        } catch (err) {
+            console.error(err);
+        }
+
+        if (window.speechInterval) clearInterval(window.speechInterval);
+        window.speechInterval = setInterval(() => {
+            if (synth.speaking && !synth.paused) {
+                synth.pause();
+                synth.resume();
+            } else if (!synth.speaking) {
+                clearInterval(window.speechInterval);
+            }
+        }, 14000);
+    };
+
+    const extractTextAndSpeak = async () => {
+        if (!fileObj || !pdfjs) return;
+        try {
+            toast.loading('Preparing audio...', { id: 'audio-toast' });
+            let pdf = pdfDocument;
+            if (!pdf) {
+                const loadingTask = pdfjs.getDocument(fileObj);
+                pdf = await loadingTask.promise;
+            }
+            const page = await pdf.getPage(pageNumber);
+            const textContent = await page.getTextContent();
+
+            let text = textContent.items.map(item => item.str).join(' ');
+            toast.dismiss('audio-toast');
+
+            if (!text.trim()) {
+                toast.error('No readable text found on this page.');
+                return;
+            }
+
+            synth.cancel();
+            if (window.speechInterval) clearInterval(window.speechInterval);
+
+            // Chunk text to avoid SpeechSynthesis limits
+            audioChunksRef.current = text.match(/[\s\S]{1,100}(?=\s|$)/g) || [text];
+            currentAudioChunkIndexRef.current = 0;
+
+            setAudioState('playing');
+            audioStateRef.current = 'playing';
+            speakCurrentChunk();
+
+        } catch (error) {
+            console.error('Audio extraction error', error);
+            toast.error('Failed to prepare audio.');
+            toast.dismiss('audio-toast');
+            setAudioState('idle');
+            audioStateRef.current = 'idle';
+        }
+    };
+
+    const toggleAudio = () => {
+        if (audioState === 'idle') {
+            extractTextAndSpeak();
+        } else if (audioState === 'playing') {
+            synth.pause();
+            setAudioState('paused');
+            audioStateRef.current = 'paused';
+        } else if (audioState === 'paused') {
+            synth.resume();
+            setAudioState('playing');
+            audioStateRef.current = 'playing';
+        }
+    };
+
+    const stopAudio = () => {
+        audioStateRef.current = 'idle';
+        synth.cancel();
+        if (window.speechInterval) clearInterval(window.speechInterval);
+        setAudioState('idle');
+    };
+
+    const skipForward = () => {
+        if (audioState === 'idle' || audioChunksRef.current.length === 0) return;
+        if (currentAudioChunkIndexRef.current < audioChunksRef.current.length - 1) {
+            currentAudioChunkIndexRef.current++;
+            if (audioState === 'playing') {
+                synth.cancel();
+                speakCurrentChunk();
+            }
+        }
+    };
+
+    const skipBackward = () => {
+        if (audioState === 'idle' || audioChunksRef.current.length === 0) return;
+        if (currentAudioChunkIndexRef.current > 0) {
+            currentAudioChunkIndexRef.current--;
+            if (audioState === 'playing') {
+                synth.cancel();
+                speakCurrentChunk();
+            }
+        }
+    };
 
     // Keyboard Navigation
     useEffect(() => {
@@ -104,8 +432,9 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    function onDocumentLoadSuccess({ numPages }) {
-        setNumPages(numPages);
+    function onDocumentLoadSuccess(pdf) {
+        setNumPages(pdf.numPages);
+        setPdfDocument(pdf);
     }
 
     // Canvas Drawing Logic
@@ -256,6 +585,36 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
         setIsSaved(false);
     };
 
+    const [loadingProgress, setLoadingProgress] = useState(true);
+
+    // Load saved progress
+    useEffect(() => {
+        if (!user || !book) return;
+        setLoadingProgress(true);
+        const progressKey = `reading_progress_${user.id || 'guest'}_${book.id}`;
+        console.log('Loading progress from key:', progressKey);
+        const savedPage = localStorage.getItem(progressKey);
+        console.log('Saved page found:', savedPage);
+        if (savedPage) {
+            setPageNumber(parseInt(savedPage));
+        } else {
+            setPageNumber(1);
+        }
+        // Small timeout to ensure state settles before allowing saves
+        setTimeout(() => setLoadingProgress(false), 100);
+    }, [book.id, user?.id]);
+
+    // Save progress on page change
+    useEffect(() => {
+        if (loadingProgress) return;
+        if (!user || !book) return;
+        if (pageNumber > 0) {
+            const progressKey = `reading_progress_${user.id || 'guest'}_${book.id}`;
+            console.log('Saving progress to key:', progressKey, 'Page:', pageNumber);
+            localStorage.setItem(progressKey, pageNumber);
+        }
+    }, [pageNumber, book.id, user?.id, loadingProgress]);
+
     return (
         <div className="fixed inset-0 bg-slate-900 z-[70] flex flex-col font-sans">
             {/* Toolbar */}
@@ -280,13 +639,23 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
                     </div>
 
                     <div className="h-8 w-px bg-slate-700 mx-2 hidden sm:block"></div>
-                    <button
-                        onClick={() => setShowDiscussions(!showDiscussions)}
-                        className={`p-2 rounded-lg transition flex items-center gap-2 ${showDiscussions ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:text-white'}`}
-                    >
-                        <RiMessage3Line size={18} />
-                        <span className="text-[10px] font-bold uppercase hidden lg:inline">Discussions</span>
-                    </button>
+                    <div className="flex bg-slate-900/50 p-1 rounded-lg gap-1 border border-slate-700">
+                        <button
+                            onClick={() => setShowTranslation(!showTranslation)}
+                            className={`p-2 rounded-lg transition flex items-center gap-2 ${showTranslation ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30' : 'text-slate-400 hover:text-white'}`}
+                            title="Translate Page Text"
+                        >
+                            <RiTranslate2 size={18} />
+                            <span className="text-[10px] font-bold uppercase hidden lg:inline">Translate</span>
+                        </button>
+                        <button
+                            onClick={() => setShowDiscussions(!showDiscussions)}
+                            className={`p-2 rounded-lg transition flex items-center gap-2 ${showDiscussions ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            <RiMessage3Line size={18} />
+                            <span className="text-[10px] font-bold uppercase hidden lg:inline">Discussions</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -396,8 +765,12 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
                         }}
                     >
                         <Document
-                            file={`${SERVER_URL}/${book.pdf_url}`}
+                            file={fileObj}
                             onLoadSuccess={onDocumentLoadSuccess}
+                            onLoadError={(error) => {
+                                console.error('Error while loading document!', error);
+                                alert('Error loading PDF: ' + error.message);
+                            }}
                             loading={
                                 <div className="flex flex-col items-center gap-4 py-20">
                                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -422,6 +795,59 @@ const EnhancedReader = ({ book, onClose, SERVER_URL, user, discussions = [], pos
                             onMouseUp={stopDrawing}
                             onMouseOut={stopDrawing}
                         />
+
+                        {/* Translation Overlay */}
+                        {showTranslation && (
+                            <div className="absolute inset-0 z-30 bg-slate-900/95 backdrop-blur-sm p-6 flex flex-col font-sans transition-all duration-300">
+                                <div className="flex justify-between items-center mb-6 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                                    <div className="flex items-center gap-3">
+                                        <RiTranslate2 className="text-indigo-400 text-xl" />
+                                        <h3 className="text-white font-bold">Translation Mode</h3>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <select
+                                            value={pageTranslationLang}
+                                            onChange={(e) => {
+                                                setPageTranslationLang(e.target.value);
+                                                setTargetLang(e.target.value);
+                                                setAutoTranslate(true); // Enable audio translation when page translation changes
+                                                pageTranslationLangRef.current = e.target.value;
+                                                targetLangRef.current = e.target.value;
+                                                autoTranslateRef.current = true;
+                                                if (audioStateRef.current === 'playing') {
+                                                    synth.cancel();
+                                                    speakCurrentChunk();
+                                                }
+                                            }}
+                                            className="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-indigo-500"
+                                        >
+                                            <option value="hi">Hindi (हिंदी)</option>
+                                            <option value="mr">Marathi (मराठी)</option>
+                                            <option value="gu">Gujarati (ગુજરાતી)</option>
+                                            <option value="bn">Bengali (বাংলা)</option>
+                                            <option value="ta">Tamil (தமிழ்)</option>
+                                            <option value="te">Telugu (తెలుగు)</option>
+                                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                                            <option value="ml">Malayalam (മലയാളം)</option>
+                                            <option value="en">English</option>
+                                        </select>
+                                        <button onClick={() => setShowTranslation(false)} className="text-slate-400 hover:text-white bg-slate-700/50 p-2 rounded-lg"><RiCloseLine /></button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-800/50 rounded-xl border border-slate-700 p-6 text-slate-200">
+                                    {isTranslatingPage ? (
+                                        <div className="flex flex-col items-center justify-center h-full gap-4 text-indigo-400">
+                                            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <p className="animate-pulse">Translating to {pageTranslationLang === 'hi' ? 'Hindi' : pageTranslationLang === 'mr' ? 'Marathi' : 'your language'}...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ fontFamily: "'Noto Sans', 'Inter', sans-serif" }}>
+                                            {translatedPageText}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Pagination */}

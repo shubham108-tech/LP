@@ -12,17 +12,21 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter (optional but recommended)
+// File filter
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedImageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedDocExts = ['.pdf', '.xlsx', '.xls', '.csv'];
+
+    if (file.mimetype.startsWith('image/') && allowedImageExts.includes(ext)) {
         cb(null, true);
-    } else if (file.mimetype === 'application/pdf' ||
-        file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-        file.mimetype === 'application/vnd.ms-excel') {
-        // Allow PDF and Excel for bulk upload routes (handled separately if needed)
+    } else if ((file.mimetype === 'application/pdf' && ext === '.pdf') ||
+        (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' && ext === '.xlsx') ||
+        (file.mimetype === 'application/vnd.ms-excel' && ext === '.xls') ||
+        (file.mimetype === 'text/csv' && ext === '.csv')) {
         cb(null, true);
     } else {
-        cb(new Error('Only images (and PDF/Excel for bulk) are allowed!'), false);
+        cb(new Error('Invalid file type! Only JPG, PNG, GIF, WEBP, PDF, XLSX, XLS, and CSV are allowed.'), false);
     }
 };
 

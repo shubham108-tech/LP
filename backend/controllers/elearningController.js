@@ -17,13 +17,15 @@ exports.getNotes = async (req, res) => {
         if (req.user.role === 'teacher') {
             conditions.push('notes.uploaded_by = ?');
             params.push(req.user.id);
-        } else if (req.user.role === 'student') {
-            // Students see notes for their branch or General
-            // Also optionally filter by year if we added year to notes (we haven't yet, but maybe in future)
-            // For now, filter by branch
+        } else if (req.user.role === 'student' || req.user.role === 'hod') {
+            // Students/HODs see notes for their branch
             if (req.user.branch) {
-                conditions.push('(notes.branch = ? OR notes.branch = "General" OR notes.branch IS NULL)');
+                conditions.push('notes.branch = ?');
                 params.push(req.user.branch);
+            }
+            if (req.user.division) {
+                conditions.push('notes.division = ?');
+                params.push(req.user.division);
             }
         }
 
@@ -49,7 +51,7 @@ exports.getNotes = async (req, res) => {
 // Upload a note
 exports.createNote = async (req, res) => {
     try {
-        const { title, description, subject, branch, resource_type, video_url } = req.body;
+        const { title, description, subject, branch, division, resource_type, video_url } = req.body;
         const file = req.file;
 
         if (!title) {
@@ -69,8 +71,8 @@ exports.createNote = async (req, res) => {
         }
 
         await db.query(
-            'INSERT INTO notes (title, description, file_url, video_url, resource_type, subject, category, branch, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [title, description, finalFileUrl, video_url, finalResourceType, subject, req.body.category || 'General', branch, req.user.id]
+            'INSERT INTO notes (title, description, file_url, video_url, resource_type, subject, category, branch, division, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [title, description, finalFileUrl, video_url, finalResourceType, subject, req.body.category || 'General', branch, division || null, req.user.id]
         );
 
         res.status(201).json({ message: 'Resource shared successfully' });
@@ -83,7 +85,7 @@ exports.createNote = async (req, res) => {
 exports.updateNote = async (req, res) => {
     try {
         const noteId = req.params.id;
-        const { title, description, subject, branch, category, resource_type, video_url } = req.body;
+        const { title, description, subject, branch, division, category, resource_type, video_url } = req.body;
         const file = req.file;
 
         // Check existence and ownership
@@ -109,10 +111,10 @@ exports.updateNote = async (req, res) => {
 
         await db.query(
             `UPDATE notes SET 
-                title = ?, description = ?, subject = ?, branch = ?, category = ?, 
+                title = ?, description = ?, subject = ?, branch = ?, division = ?, category = ?, 
                 resource_type = ?, video_url = ?, file_url = ? 
              WHERE id = ?`,
-            [title, description, subject, branch, category || 'General', finalResourceType, video_url, finalFileUrl, noteId]
+            [title, description, subject, branch, division || null, category || 'General', finalResourceType, video_url, finalFileUrl, noteId]
         );
 
         res.json({ message: 'Note updated successfully' });
@@ -178,8 +180,12 @@ exports.getAssignments = async (req, res) => {
             params = [req.user.id];
 
             if (req.user.branch) {
-                query += ' WHERE (a.branch = ? OR a.branch = "General" OR a.branch IS NULL)';
+                query += ' WHERE a.branch = ?';
                 params.push(req.user.branch);
+                if (req.user.division) {
+                    query += ' AND a.division = ?';
+                    params.push(req.user.division);
+                }
             }
         }
 
@@ -196,7 +202,7 @@ exports.getAssignments = async (req, res) => {
 // Create assignment
 exports.createAssignment = async (req, res) => {
     try {
-        const { title, description, due_date, subject, branch } = req.body;
+        const { title, description, due_date, subject, branch, division } = req.body;
 
         if (!title || !due_date) {
             return res.status(400).json({ message: 'Title and due date are required' });
@@ -209,8 +215,8 @@ exports.createAssignment = async (req, res) => {
         }
 
         await db.query(
-            'INSERT INTO assignments (title, description, due_date, subject, branch, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, description, due_date, subject, finalBranch, req.user.id]
+            'INSERT INTO assignments (title, description, due_date, subject, branch, division, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [title, description, due_date, subject, finalBranch, division || null, req.user.id]
         );
 
         res.status(201).json({ message: 'Assignment created successfully' });
@@ -326,10 +332,14 @@ exports.getSchedules = async (req, res) => {
         let params = [];
         let conditions = [];
 
-        if (req.user.role === 'student') {
+        if (req.user.role === 'student' || req.user.role === 'hod') {
             if (req.user.branch) {
-                conditions.push('(branch = ? OR branch = "General" OR branch IS NULL)');
+                conditions.push('branch = ?');
                 params.push(req.user.branch);
+            }
+            if (req.user.division) {
+                conditions.push('division = ?');
+                params.push(req.user.division);
             }
         }
 
@@ -346,10 +356,10 @@ exports.getSchedules = async (req, res) => {
 
 exports.createSchedule = async (req, res) => {
     try {
-        const { title, type, start_time, end_time, description, branch } = req.body;
+        const { title, type, start_time, end_time, description, branch, division } = req.body;
         await db.query(
-            'INSERT INTO schedules (title, type, start_time, end_time, description, branch) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, type, start_time, end_time, description, branch || null]
+            'INSERT INTO schedules (title, type, start_time, end_time, description, branch, division) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [title, type, start_time, end_time, description, branch || null, division || null]
         );
         res.status(201).json({ message: 'Schedule created' });
     } catch (error) {

@@ -12,6 +12,7 @@ const Register = () => {
     const [role, setRole] = useState('student'); // Default role
     const [branch, setBranch] = useState('');
     const [year, setYear] = useState('');
+    const [division, setDivision] = useState('');
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
@@ -31,20 +32,22 @@ const Register = () => {
         'Final Year'
     ];
 
+    const divisions = ['A', 'B', 'C'];
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         // Basic validation
-        if (!name || !email || !password || !branch || !year) {
-            toast.error('Please fill in all fields including Branch and Year');
+        if (!name || !email || !password || !branch || !year || !division) {
+            toast.error('Please fill in all fields including Branch, Year and Division');
             setLoading(false);
             return;
         }
 
         try {
             console.log('Initiating registration for:', email);
-            const res = await api.post('/auth/register', { name, email, password, role, branch, year });
+            const res = await api.post('/auth/register', { name, email, password, role, branch, year, division });
             console.log('Register Response:', res.data);
 
             if (res.data && res.data.registrationToken) {
@@ -147,17 +150,34 @@ const Register = () => {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-blue-100 mb-1">Password</label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all placeholder-blue-200/50 text-white"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-blue-100 mb-1">Division</label>
+                            <select
+                                required
+                                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all text-white [&>option]:text-black"
+                                value={division}
+                                onChange={(e) => setDivision(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="" disabled>Select Division</option>
+                                {divisions.map((d) => (
+                                    <option key={d} value={d}>Division {d}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-blue-100 mb-1">Password</label>
+                            <input
+                                type="password"
+                                required
+                                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all placeholder-blue-200/50 text-white"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
                     </div>
 
                     <input type="hidden" value="student" />

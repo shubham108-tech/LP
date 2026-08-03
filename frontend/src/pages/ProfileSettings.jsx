@@ -13,6 +13,7 @@ const ProfileSettings = () => {
         password: '',
         branch: '',
         year: '',
+        division: '',
         profile_image: null
     });
     const [previewImage, setPreviewImage] = useState(null);
@@ -24,7 +25,8 @@ const ProfileSettings = () => {
                 name: user.name || '',
                 email: user.email || '',
                 branch: user.branch || '',
-                year: user.year || ''
+                year: user.year || '',
+                division: user.division || ''
             }));
             if (user.profile_image) {
                 setPreviewImage(`${SERVER_URL}${user.profile_image}`);
@@ -54,6 +56,7 @@ const ProfileSettings = () => {
             data.append('email', formData.email);
             if (formData.branch) data.append('branch', formData.branch);
             if (formData.year) data.append('year', formData.year);
+            if (formData.division) data.append('division', formData.division);
             if (formData.password) {
                 data.append('password', formData.password);
             }
@@ -130,7 +133,57 @@ const ProfileSettings = () => {
                         />
                     </div>
 
-
+                    {/* Additional Details (Branch/Year/Division) */}
+                    {(user?.role === 'student' || user?.role === 'teacher') && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Branch</label>
+                                <select
+                                    name="branch"
+                                    value={formData.branch}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                >
+                                    <option value="">Select Branch</option>
+                                    <option value="Computer Science">Computer Science</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Electronics & Comm">Electronics & Comm</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Year</label>
+                                <select
+                                    name="year"
+                                    value={formData.year}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                >
+                                    <option value="">Select Year</option>
+                                    <option value="First Year">First Year</option>
+                                    <option value="Second Year">Second Year</option>
+                                    <option value="Third Year">Third Year</option>
+                                    <option value="Final Year">Final Year</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Division</label>
+                                <select
+                                    name="division"
+                                    value={formData.division}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                >
+                                    <option value="">Select Division</option>
+                                    <option value="A">Division A</option>
+                                    <option value="B">Division B</option>
+                                    <option value="C">Division C</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Password */}
                     <div className="space-y-2">

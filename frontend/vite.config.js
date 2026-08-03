@@ -10,6 +10,6 @@ export default defineConfig({
     watch: {
       usePolling: true
     },
-    allowedHosts: ['shubham.com', 'www.shubham.com']
+    allowedHosts: true
   }
 })

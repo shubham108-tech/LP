@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: librarypro_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: library_db
+      MYSQL_USER: rootuser
+      MYSQL_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/models/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  backend:
+    build: ./backend
+    container_name: librarypro_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=library_db
+      - JWT_SECRET=production_secret_key_123
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - EMAIL_USER=sb1008.com@gmail.com
+      - EMAIL_PASS=mpexskntpgajpkzj
+    depends_on:
+      - db
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
+    container_name: librarypro_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  backend_uploads:

@@ -14,7 +14,18 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+    const ext = require('path').extname(file.originalname).toLowerCase();
+    const allowedExts = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt', '.zip', '.rar'];
+
+    if (allowedExts.includes(ext)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type! Only PDF, DOC, PPT, TXT, and Archive files are allowed.'), false);
+    }
+};
+
+const upload = multer({ storage, fileFilter });
 
 // ========================
 // NOTES ROUTES

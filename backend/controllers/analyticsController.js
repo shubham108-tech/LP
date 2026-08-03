@@ -141,7 +141,7 @@ exports.getHODAnalytics = async (req, res) => {
 
         const teacherParams = [];
         if (req.user.role === 'hod' && req.user.branch) {
-            teacherQuery += ' AND (u.branch = ? OR u.branch IS NULL)';
+            teacherQuery += ' AND u.branch = ?';
             teacherParams.push(req.user.branch);
         }
         teacherQuery += ' ORDER BY exam_count DESC';

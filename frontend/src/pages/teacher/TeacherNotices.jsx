@@ -9,6 +9,7 @@ const TeacherNotices = () => {
     const [message, setMessage] = useState('');
     const [targetBranch, setTargetBranch] = useState(user?.branch || '');
     const [targetYear, setTargetYear] = useState('');
+    const [targetDivision, setTargetDivision] = useState('');
     const [loading, setLoading] = useState(false);
 
     const [notices, setNotices] = useState([]);
@@ -40,12 +41,14 @@ const TeacherNotices = () => {
             const res = await api.post('/notifications/send', {
                 message,
                 branch: targetBranch,
-                year: targetYear
+                year: targetYear,
+                division: targetDivision
             });
             toast.success(res.data.message);
             setMessage('');
             if (!user.branch) setTargetBranch('');
             setTargetYear('');
+            setTargetDivision('');
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to send notice');
         } finally {
@@ -88,22 +91,6 @@ const TeacherNotices = () => {
                 <form onSubmit={handleSend} className="space-y-5">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Target Branch</label>
-                            <select
-                                className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                value={targetBranch}
-                                onChange={(e) => setTargetBranch(e.target.value)}
-                                disabled={!!user.branch} // Lock if teacher has branch assigned
-                            >
-                                <option value="">All Branches</option>
-                                <option value="Computer Science">Computer Science</option>
-                                <option value="Civil Engineering">Civil Engineering</option>
-                                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                <option value="Electronics & Comm">Electronics & Comm</option>
-                                <option value="Electrical Engineering">Electrical Engineering</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700">Target Year</label>
                             <select
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -115,6 +102,19 @@ const TeacherNotices = () => {
                                 <option value="Second Year">Second Year</option>
                                 <option value="Third Year">Third Year</option>
                                 <option value="Final Year">Final Year</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">Target Division</label>
+                            <select
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                value={targetDivision}
+                                onChange={(e) => setTargetDivision(e.target.value)}
+                            >
+                                <option value="">All Divisions</option>
+                                <option value="A">Division A</option>
+                                <option value="B">Division B</option>
+                                <option value="C">Division C</option>
                             </select>
                         </div>
                     </div>

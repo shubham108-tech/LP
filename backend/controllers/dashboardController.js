@@ -144,15 +144,20 @@ exports.getDashboardData = async (req, res) => {
 
 exports.getStats = async (req, res) => {
     try {
-        const [books] = await db.query('SELECT SUM(total_quantity) as totalBooks, SUM(available_quantity) as availableBooks FROM books');
-        const [issued] = await db.query('SELECT COUNT(*) as issuedBooks FROM book_issues WHERE returned = 0');
-        const [users] = await db.query('SELECT COUNT(*) as totalUsers FROM users WHERE role != "admin"'); // Teachers/Staff
+        // Physical Books
+        const [books] = await db.query('SELECT SUM(total_quantity) as count FROM books');
+        // Digital Journals / Notes
+        const [notes] = await db.query('SELECT COUNT(*) as count FROM notes');
+        // Research Papers / Projects
+        const [projects] = await db.query('SELECT COUNT(*) as count FROM projects');
+        // Active Members (Users)
+        const [users] = await db.query('SELECT COUNT(*) as count FROM users WHERE role != "admin"');
 
         res.json({
-            totalBooks: books[0].totalBooks || 0,
-            availableBooks: books[0].availableBooks || 0,
-            issuedBooks: issued[0].issuedBooks || 0,
-            totalTeachers: users[0].totalUsers || 0
+            totalBooks: books[0].count || 0,
+            digitalJournals: notes[0].count || 0,
+            researchPapers: projects[0].count || 0,
+            activeMembers: users[0].count || 0
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });

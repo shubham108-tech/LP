@@ -1,0 +1,28 @@
+{
+  "reqBody": {
+    "add_stock": 5
+  },
+  "id": "1",
+  "updateName": "Test",
+  "existing": {
+    "id": 1,
+    "item_name": "Test",
+    "category": "Consumable",
+    "total_stock": 25,
+    "available_stock": 24,
+    "min_stock_limit": 5,
+    "unit": "pcs",
+    "created_at": "2026-03-16T11:31:10.000Z"
+  },
+  "queryStr": "UPDATE stationary_items SET item_name = ?, category = ?, min_stock_limit = ?, unit = ?, total_stock = ?, available_stock = ? WHERE id = ?",
+  "queryParams": [
+    "Test",
+    "Consumable",
+    5,
+    "pcs",
+    30,
+    29,
+    "1"
+  ],
+  "add_stock": 5
+}

@@ -323,7 +323,7 @@ const BooksManager = () => {
 
             {/* Content Area */}
             {selectedBooks.length > 0 && (
-                <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg flex justify-between items-center animate-fade-in-down border border-red-100">
+                <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg flex justify-between items-center border border-red-100">
                     <span className="font-medium flex items-center gap-2"><RiDeleteBinLine /> {selectedBooks.length} items selected</span>
                     <button onClick={handleBulkDelete} className="px-3 py-1 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50 text-sm font-bold">Delete Selected</button>
                 </div>
@@ -410,18 +410,18 @@ const BooksManager = () => {
                         <div key={book.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group relative">
                             <div className="aspect-[2/3] bg-gray-100 relative overflow-hidden">
                                 {book.image_url ? (
-                                    <img src={`${SERVER_URL}/${book.image_url}`} className="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="" />
+                                    <img src={`${SERVER_URL}/${book.image_url}`} className="w-full h-full object-cover transition" alt="" />
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-gray-300 text-4xl"><RiBookLine /></div>
                                 )}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
                                     {book.pdf_url && (
-                                        <a href={`${SERVER_URL}/${book.pdf_url}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white text-red-600 rounded-full hover:scale-110 transition shadow-lg" title="View PDF">
+                                        <a href={`${SERVER_URL}/${book.pdf_url}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white text-red-600 rounded-full transition shadow-lg" title="View PDF">
                                             <RiDownloadLine />
                                         </a>
                                     )}
-                                    <button onClick={() => handleEdit(book)} className="p-3 bg-white text-blue-600 rounded-full hover:scale-110 transition shadow-lg"><RiEditLine /></button>
-                                    <button onClick={() => handleDelete(book.id)} className="p-3 bg-white text-red-600 rounded-full hover:scale-110 transition shadow-lg"><RiDeleteBinLine /></button>
+                                    <button onClick={() => handleEdit(book)} className="p-3 bg-white text-blue-600 rounded-full transition shadow-lg"><RiEditLine /></button>
+                                    <button onClick={() => handleDelete(book.id)} className="p-3 bg-white text-red-600 rounded-full transition shadow-lg"><RiDeleteBinLine /></button>
                                 </div>
                                 <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                                     {book.available_quantity === 0 && <span className="bg-red-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded">Stock Out</span>}

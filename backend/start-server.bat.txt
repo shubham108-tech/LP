@@ -1,0 +1,2 @@
+cd /d D:\LB\backend
+pm2 start server.js

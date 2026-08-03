@@ -493,7 +493,7 @@ const TeacherDashboard = () => {
                                         </button>
                                         <div className="h-48 bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
                                             {book.image_url ? (
-                                                <img src={`${SERVER_URL}/${book.image_url}`} alt={book.book_name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                <img src={`${SERVER_URL}/${book.image_url}`} alt={book.book_name} className="w-full h-full object-cover transition" />
                                             ) : (
                                                 <RiBookmarkLine className="text-4xl text-slate-300 dark:text-slate-500" />
                                             )}
@@ -619,7 +619,7 @@ const TeacherDashboard = () => {
                                             </button>
                                         </div>
                                         {book.image_url ? (
-                                            <img src={`${SERVER_URL}/${book.image_url}`} alt={book.book_name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            <img src={`${SERVER_URL}/${book.image_url}`} alt={book.book_name} className="w-full h-full object-cover transition" />
                                         ) : (
                                             <RiBookOpenLine className="text-4xl text-emerald-300 dark:text-emerald-700" />
                                         )}
@@ -633,7 +633,7 @@ const TeacherDashboard = () => {
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{book.author}</p>
                                         <button
                                             onClick={() => openReader(book)}
-                                            className="mt-auto w-full py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                                            className="mt-auto w-full py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition-all"
                                         >
                                             <RiBookOpenLine size={18} /> Read Now
                                         </button>
@@ -944,7 +944,7 @@ const TeacherDashboard = () => {
                             <div className="p-6 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700">
                                 <h3 className="font-bold text-lg mb-4 dark:text-white flex items-center gap-2">
                                     <RiStarFill className="text-yellow-400" />
-                                    Reviews <span className="text-sm font-normal text-gray-500">({selectedBookReviews.average_rating} / 5.0)</span>
+                                    Reviews <span className="text-sm font-normal text-gray-500">({averageRating} / 5.0)</span>
                                 </h3>
 
                                 {/* Review Form */}
@@ -975,10 +975,10 @@ const TeacherDashboard = () => {
 
                                 {/* Reviews List */}
                                 <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                                    {selectedBookReviews.reviews.length === 0 ? (
+                                    {selectedBookReviews.length === 0 ? (
                                         <p className="text-gray-400 text-sm text-center py-4">No reviews yet.</p>
                                     ) : (
-                                        selectedBookReviews.reviews.map((rev) => (
+                                        selectedBookReviews.map((rev) => (
                                             <div key={rev.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div className="flex items-center gap-2">

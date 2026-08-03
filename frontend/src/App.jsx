@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Suspense, lazy } from 'react';
 
-// Lazy Load Components to prevent bundle crashes
+// Lazy Load Components
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const OTPVerification = lazy(() => import('./pages/OTPVerification'));
@@ -16,6 +16,7 @@ const RequestsManager = lazy(() => import('./pages/admin/RequestsManager'));
 const IssuesManager = lazy(() => import('./pages/admin/IssuesManager'));
 const TeachersManager = lazy(() => import('./pages/admin/TeachersManager'));
 const StudentsManager = lazy(() => import('./pages/admin/StudentsManager'));
+const StationaryAdmin = lazy(() => import('./pages/admin/StationaryAdmin'));
 
 // Teacher Pages
 const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
@@ -31,6 +32,12 @@ const TeacherPerformance = lazy(() => import('./pages/admin/TeacherPerformance')
 const FeedbackManager = lazy(() => import('./pages/admin/FeedbackManager'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const Feedback = lazy(() => import('./pages/Feedback'));
+const StationaryTeacher = lazy(() => import('./pages/teacher/StationaryTeacher'));
+
+// Engineering / Shared Pages
+const ProjectRepository = lazy(() => import('./pages/engineering/ProjectRepository'));
+const PlacementZone = lazy(() => import('./pages/engineering/PlacementZone'));
+const ResourceBooking = lazy(() => import('./pages/engineering/ResourceBooking'));
 
 // Components
 import Layout from './components/Layout';
@@ -76,12 +83,20 @@ function App() {
                             <Route path="issues" element={<IssuesManager />} />
                             <Route path="teachers" element={<TeachersManager />} />
                             <Route path="students" element={<StudentsManager />} />
+                            <Route path="stationary" element={<StationaryAdmin />} />
                             <Route path="performance" element={<TeacherPerformance />} />
                             <Route path="feedback" element={<FeedbackManager />} />
                             <Route path="profile" element={<ProfileSettings />} />
                         </Route>
 
-                        {/* Teacher Routes */}
+                        {/* Engineering / Shared Routes */}
+                        <Route path="/engineering" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                            <Route path="projects" element={<ProjectRepository />} />
+                            <Route path="placements" element={<PlacementZone />} />
+                            <Route path="resources" element={<ResourceBooking />} />
+                        </Route>
+
+                        {/* Teacher/Student Routes */}
                         <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
                             <Route index element={<Navigate to="/teacher/dashboard" />} />
                             <Route path="dashboard" element={<TeacherDashboard />} />
@@ -90,6 +105,7 @@ function App() {
                             <Route path="assignments" element={<AssignmentsManager />} />
                             <Route path="exams" element={<ExamsManager />} />
                             <Route path="schedule" element={<ScheduleManager />} />
+                            <Route path="stationary" element={<StationaryTeacher />} />
                             <Route path="analytics" element={<AnalyticsDashboard />} />
                             <Route path="notices" element={<TeacherNotices />} />
                             <Route path="feedback" element={<Feedback />} />
