@@ -93,12 +93,16 @@ app.use('/api/stationary', require('./routes/stationaryRoutes'));
 // ✅ ADDED: React Frontend Serve Karne Ka Code
 // ===================================================
 
-// React build folder (dist) ko static serve karega
-app.use(express.static(path.join(__dirname, 'client')));
+// React build folder (dist/client) ko static serve karega
+const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
+    ? path.join(__dirname, '../frontend/dist')
+    : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
+
+app.use(express.static(frontendDistPath));
 
 // React Router support (important)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client', 'index.html'));
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
 // ===================================================
@@ -114,6 +118,10 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+module.exports = app;
