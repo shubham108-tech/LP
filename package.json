@@ -2,7 +2,9 @@
   "name": "library-system-root",
   "version": "1.0.0",
   "scripts": {
-    "start": "npm run dev",
+    "build": "node build_vercel.js",
+    "vercel-build": "node build_vercel.js",
+    "start": "node backend/server.js",
     "dev": "node update_hosts.js && concurrently \"npm run server\" \"npm run client\"",
     "server": "cd backend && npm run dev",
     "client": "cd frontend && npm run dev",
