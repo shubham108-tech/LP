@@ -2,7 +2,7 @@ const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
