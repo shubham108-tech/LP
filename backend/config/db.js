@@ -6,35 +6,31 @@ const bcrypt = require('bcrypt');
 
 dotenv.config();
 
-let usePureJs = false;
+let usePureJs = true; // Default to safe pure JS mode on serverless unless MySQL configured
+let promisePool = null;
 let memoryDb = null;
 
-const mysqlPool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
-    database: process.env.DB_NAME || 'library_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-const promisePool = mysqlPool.promise();
-
-// Test MySQL connection
-(async () => {
+// Only attempt MySQL pool creation if explicit cloud DB_HOST is provided
+if (process.env.DB_HOST && process.env.DB_HOST !== 'localhost') {
     try {
-        if (!process.env.DB_HOST && process.env.VERCEL) {
-            throw new Error('No DB_HOST configured on Vercel environment');
-        }
-        await promisePool.query('SELECT 1');
-        console.log('✅ Connected to MySQL Database.');
-    } catch (err) {
-        console.log('⚠️ MySQL Connection unavailable. Falling back to Pure JS Portable Database...');
+        const mysqlPool = mysql.createPool({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_NAME || 'library_db',
+            port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+            waitForConnections: true,
+            connectionLimit: 5,
+            queueLimit: 0
+        });
+        promisePool = mysqlPool.promise();
+        usePureJs = false;
+        console.log('✅ Configured Cloud MySQL connection pool.');
+    } catch (e) {
+        console.log('⚠️ MySQL initialization failed. Using Pure JS Portable DB:', e.message);
         usePureJs = true;
-        await initPureJsDb();
     }
-})();
+}
 
 async function initPureJsDb() {
     if (memoryDb) return;
@@ -96,7 +92,6 @@ async function initPureJsDb() {
 
     memoryDb = { data, dbPath };
     saveJsonDb();
-    console.log(`✅ Pure JS DB initialized with ${memoryDb.data.users.length} users.`);
 }
 
 function saveJsonDb() {
@@ -108,13 +103,14 @@ function saveJsonDb() {
     }
 }
 
-// Pure JS SQL query evaluator
+// Universal query interface matching mysql2 promise API: [rows, fields]
 const dbWrapper = {
     async query(sql, params = []) {
-        if (!usePureJs) {
+        if (!usePureJs && promisePool) {
             try {
                 return await promisePool.query(sql, params);
             } catch (mysqlErr) {
+                console.log('MySQL query failed, falling back to Pure JS DB:', mysqlErr.message);
                 usePureJs = true;
                 await initPureJsDb();
             }
@@ -136,18 +132,19 @@ const dbWrapper = {
 
             let list = [...(memoryDb.data[table] || [])];
 
-            // Simple WHERE email = ?
+            // WHERE email = ?
             if (upperSql.includes('WHERE EMAIL = ?') && params.length > 0) {
                 list = list.filter(item => item.email && item.email.toLowerCase() === String(params[0]).toLowerCase());
             }
-            // Simple WHERE id = ?
+            // WHERE id = ?
             else if (upperSql.includes('WHERE ID = ?') && params.length > 0) {
                 list = list.filter(item => item.id == params[0]);
             }
-            // Simple WHERE user_id = ?
+            // WHERE user_id = ?
             else if (upperSql.includes('WHERE USER_ID = ?') && params.length > 0) {
                 list = list.filter(item => item.user_id == params[0]);
             }
+
             // COUNT(*) aggregation check
             if (upperSql.includes('COUNT(*)')) {
                 return [[{ count: list.length, 'COUNT(*)': list.length }], []];
