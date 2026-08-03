@@ -20,9 +20,6 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 
-// Trust proxy for Vercel / reverse proxy deployment
-app.set('trust proxy', 1);
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -31,80 +28,82 @@ const { authenticateToken } = require('./middleware/authMiddleware');
 
 app.use('/uploads', (req, res, next) => {
     const ext = path.extname(req.path).toLowerCase(); // ⚡ changed require('path') to path
-    if (ext === '.pdf') {
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'inline');
+    const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    if (imageExts.includes(ext)) {
+        return next();
     }
-    next();
-}, express.static(path.join(__dirname, 'uploads')));
+
+    authenticateToken(req, res, next);
+}, express.static('uploads'));
 
 const rateLimit = require('express-rate-limit');
 
-// Rate Limiters
+// Rate Limits
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { message: 'Too many attempts from this IP, please try again after 15 minutes' },
-    validate: false
+    max: 50,
+    message: { message: 'Too many login attempts. Try again later.' }
 });
 
 const otpLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 20,
-    message: { message: 'Too many OTP requests. Try again later.' },
-    validate: false
+    max: 5,
+    message: { message: 'Too many OTP requests. Try again later.' }
 });
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
-    message: { message: 'Too many requests. Try again later.' },
-    validate: false
+    message: { message: 'Too many requests. Try again later.' }
 });
 
-// Apply Rate Limits (skip on Vercel serverless functions)
-if (!process.env.VERCEL) {
-    app.use('/api/auth/login', authLimiter);
-    app.use('/api/auth/register', otpLimiter);
-    app.use('/api/auth/resend-otp', otpLimiter);
-    app.use('/api', apiLimiter);
-}
+// Apply Rate Limits
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', otpLimiter); // Protect public register OTP
+app.use('/api/auth/resend-otp', otpLimiter); // Protect public resend OTP
+// The rest (like bulk upload, user list) will fall under apiLimiter
+app.use('/api', apiLimiter);
 
 const engagementRoutes = require('./routes/engagementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
-// API Routes (Supporting both /api/* and direct /* for Vercel rewrites)
-app.use(['/api/auth', '/auth'], authRoutes);
-app.use(['/api/books', '/books'], bookRoutes);
-app.use(['/api/requests', '/requests'], requestRoutes);
-app.use(['/api/issues', '/issues'], issueRoutes);
-app.use(['/api/admin', '/admin'], dashboardRoutes);
-app.use(['/api/suggestions', '/suggestions'], suggestionRoutes);
-app.use(['/api/discussions', '/discussions'], discussionRoutes);
-app.use(['/api', '/'], reviewRoutes);
-app.use(['/api/engineering', '/engineering'], require('./routes/engineeringRoutes'));
-app.use(['/api/elearning', '/elearning'], elearningRoutes);
-app.use(['/api/exams', '/exams'], examRoutes);
-app.use(['/api/schedules', '/schedules'], scheduleRoutes);
-app.use(['/api/analytics', '/analytics'], analyticsRoutes);
-app.use(['/api/engagement', '/engagement'], engagementRoutes);
-app.use(['/api/notifications', '/notifications'], notificationRoutes);
-app.use(['/api/feedback', '/feedback'], require('./routes/feedbackRoutes'));
-app.use(['/api/gamification', '/gamification'], require('./routes/gamificationRoutes'));
-app.use(['/api/stationary', '/stationary'], require('./routes/stationaryRoutes'));
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/books', bookRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/issues', issueRoutes);
+app.use('/api/admin', dashboardRoutes);
+app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/discussions', discussionRoutes);
+app.use('/api', reviewRoutes);
+app.use('/api/engineering', require('./routes/engineeringRoutes'));
+app.use('/api/elearning', elearningRoutes);
+app.use('/api/exams', examRoutes);
+app.use('/api/schedules', scheduleRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/engagement', engagementRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/gamification', require('./routes/gamificationRoutes'));
+app.use('/api/stationary', require('./routes/stationaryRoutes'));
 
-// React Frontend Serve (Only for local standalone Node server, skip on Vercel CDN)
-if (!process.env.VERCEL) {
-    const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
-        ? path.join(__dirname, '../frontend/dist')
-        : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
 
-    app.use(express.static(frontendDistPath));
+// ===================================================
+// ✅ ADDED: React Frontend Serve Karne Ka Code
+// ===================================================
 
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendDistPath, 'index.html'));
-    });
-}
+// React build folder (dist/client) ko static serve karega
+const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
+    ? path.join(__dirname, '../frontend/dist')
+    : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
+
+app.use(express.static(frontendDistPath));
+
+// React Router support (important)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+});
 
 // ===================================================
 // END OF ADDED CODE

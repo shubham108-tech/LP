@@ -1,242 +1,228 @@
 const mysql = require('mysql2');
+const sqlite3 = require('sqlite3');
+const { open } = require('sqlite');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 dotenv.config();
 
-let usePureJs = true; // Default to safe pure JS mode on serverless unless MySQL configured
-let promisePool = null;
-let memoryDb = null;
+let useSqlite = false;
+let sqliteDb = null;
 
-// Only attempt MySQL pool creation if explicit cloud DB_HOST is provided
-if (process.env.DB_HOST && process.env.DB_HOST !== 'localhost') {
+const mysqlPool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
+    database: process.env.DB_NAME || 'library_db',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+const promisePool = mysqlPool.promise();
+
+// Check MySQL connection asynchronously on startup
+(async () => {
     try {
-        const mysqlPool = mysql.createPool({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME || 'library_db',
-            port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
-            waitForConnections: true,
-            connectionLimit: 5,
-            queueLimit: 0
-        });
-        promisePool = mysqlPool.promise();
-        usePureJs = false;
-        console.log('✅ Configured Cloud MySQL connection pool.');
-    } catch (e) {
-        console.log('⚠️ MySQL initialization failed. Using Pure JS Portable DB:', e.message);
-        usePureJs = true;
-    }
-}
-
-async function initPureJsDb() {
-    if (memoryDb) return;
-
-    const dbPath = process.env.VERCEL 
-        ? path.join('/tmp', 'database.json')
-        : path.join(__dirname, '..', 'database.json');
-
-    let data = {
-        users: [],
-        books: [],
-        stationary_items: [],
-        stationary_requests: [],
-        stationary_ledger: []
-    };
-
-    if (fs.existsSync(dbPath)) {
-        try {
-            data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        } catch (e) {
-            console.log('Creating fresh JSON DB');
+        if (!process.env.DB_HOST && process.env.VERCEL) {
+            throw new Error('No DB_HOST configured on Vercel environment');
         }
+        await promisePool.query('SELECT 1');
+        console.log('✅ Connected to MySQL Database.');
+    } catch (err) {
+        console.log('⚠️ MySQL Connection unavailable. Falling back to portable SQLite Database...');
+        useSqlite = true;
+        await initSqliteFallback();
     }
+})();
 
-    // Seed default users if empty
-    if (!data.users || data.users.length === 0) {
+async function initSqliteFallback() {
+    const dbPath = process.env.VERCEL 
+        ? path.join('/tmp', 'database.sqlite')
+        : path.join(__dirname, '..', 'database.sqlite');
+
+    sqliteDb = await open({
+        filename: dbPath,
+        driver: sqlite3.Database
+    });
+
+    console.log(`✅ SQLite Database ready at ${dbPath}`);
+
+    // Create tables
+    await sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'student',
+            branch TEXT DEFAULT NULL,
+            year TEXT DEFAULT NULL,
+            division TEXT DEFAULT NULL,
+            phone_number TEXT,
+            otp TEXT,
+            otp_expiry DATETIME,
+            is_verified BOOLEAN DEFAULT 1,
+            profile_image TEXT DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS books (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_name TEXT NOT NULL,
+            author TEXT NOT NULL,
+            category TEXT DEFAULT 'General',
+            total_quantity INTEGER NOT NULL,
+            available_quantity INTEGER NOT NULL,
+            image_url TEXT DEFAULT NULL,
+            pdf_url TEXT DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS stationary_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            total_stock INTEGER NOT NULL DEFAULT 0,
+            available_stock INTEGER NOT NULL DEFAULT 0,
+            min_stock_limit INTEGER NOT NULL DEFAULT 5,
+            unit TEXT NOT NULL DEFAULT 'pcs',
+            bill_number TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS stationary_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            reason TEXT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            acted_at DATETIME NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS stationary_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL,
+            transaction_type TEXT NOT NULL,
+            received_qty INTEGER DEFAULT 0,
+            issued_qty INTEGER DEFAULT 0,
+            previous_balance INTEGER NOT NULL DEFAULT 0,
+            new_balance INTEGER NOT NULL DEFAULT 0,
+            reference_no TEXT NULL,
+            user_id INTEGER NULL,
+            notes TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
+    // Seed default accounts if empty
+    const adminCheck = await sqliteDb.get("SELECT id FROM users WHERE email = ?", ['admin@library.com']);
+    if (!adminCheck) {
         const hashAdmin = await bcrypt.hash('admin123', 10);
         const hashPass = await bcrypt.hash('password123', 10);
 
-        data.users = [
-            { id: 1, name: 'System Admin', email: 'admin@library.com', password: hashAdmin, role: 'admin', is_verified: 1, created_at: new Date().toISOString() },
-            { id: 2, name: 'HOD Engineering', email: 'sagar@library.com', password: hashPass, role: 'hod', is_verified: 1, created_at: new Date().toISOString() },
-            { id: 3, name: 'Prof. Powar', email: 'powar@library.com', password: hashPass, role: 'teacher', is_verified: 1, created_at: new Date().toISOString() },
-            { id: 4, name: 'Shubham Bhendavade', email: 'shubham@library.com', password: hashPass, role: 'student', is_verified: 1, created_at: new Date().toISOString() }
-        ];
+        await sqliteDb.run(
+            "INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, ?, 1)",
+            ['System Admin', 'admin@library.com', hashAdmin, 'admin']
+        );
+        await sqliteDb.run(
+            "INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, ?, 1)",
+            ['HOD Engineering', 'sagar@library.com', hashPass, 'hod']
+        );
+        await sqliteDb.run(
+            "INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, ?, 1)",
+            ['Prof. Powar', 'powar@library.com', hashPass, 'teacher']
+        );
+        await sqliteDb.run(
+            "INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, ?, 1)",
+            ['Shubham Bhendavade', 'shubham@library.com', hashPass, 'student']
+        );
+        console.log('✅ Demo accounts seeded in SQLite Database.');
     }
 
     // Seed default stationary items if empty
-    if (!data.stationary_items || data.stationary_items.length === 0) {
-        data.stationary_items = [
-            { id: 1, item_name: 'Blue Ballpoint Pens (Box of 10)', category: 'Consumable', total_stock: 100, available_stock: 100, min_stock_limit: 20, unit: 'boxes', bill_number: 'BILL-2026-001' },
-            { id: 2, item_name: 'Black Gel Pens (Box of 10)', category: 'Consumable', total_stock: 80, available_stock: 80, min_stock_limit: 15, unit: 'boxes', bill_number: 'BILL-2026-001' },
-            { id: 3, item_name: 'A4 Paper Rim (500 Sheets)', category: 'Consumable', total_stock: 50, available_stock: 50, min_stock_limit: 10, unit: 'rims', bill_number: 'BILL-2026-002' },
-            { id: 4, item_name: 'Whiteboard Markers (Set of 4)', category: 'Consumable', total_stock: 60, available_stock: 60, min_stock_limit: 10, unit: 'sets', bill_number: 'BILL-2026-003' },
-            { id: 5, item_name: 'Attendance Register Notebook', category: 'Consumable', total_stock: 40, available_stock: 40, min_stock_limit: 5, unit: 'pcs', bill_number: 'BILL-2026-004' }
+    const itemCheck = await sqliteDb.get("SELECT id FROM stationary_items LIMIT 1");
+    if (!itemCheck) {
+        const items = [
+            ['Blue Ballpoint Pens (Box of 10)', 'Consumable', 100, 100, 20, 'boxes', 'BILL-2026-001'],
+            ['Black Gel Pens (Box of 10)', 'Consumable', 80, 80, 15, 'boxes', 'BILL-2026-001'],
+            ['A4 Paper Rim (500 Sheets)', 'Consumable', 50, 50, 10, 'rims', 'BILL-2026-002'],
+            ['Whiteboard Markers (Set of 4)', 'Consumable', 60, 60, 10, 'sets', 'BILL-2026-003'],
+            ['Attendance Register Notebook', 'Consumable', 40, 40, 5, 'pcs', 'BILL-2026-004']
         ];
+        for (const item of items) {
+            await sqliteDb.run(
+                "INSERT INTO stationary_items (item_name, category, total_stock, available_stock, min_stock_limit, unit, bill_number) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                item
+            );
+        }
+        console.log('✅ Demo stationary items seeded in SQLite Database.');
     }
 
     // Seed default books if empty
-    if (!data.books || data.books.length === 0) {
-        data.books = [
-            { id: 1, book_name: 'The Great Gatsby', author: 'F. Scott Fitzgerald', category: 'General', total_quantity: 5, available_quantity: 5 },
-            { id: 2, book_name: 'To Kill a Mockingbird', author: 'Harper Lee', category: 'General', total_quantity: 3, available_quantity: 3 },
-            { id: 3, book_name: '1984', author: 'George Orwell', category: 'General', total_quantity: 8, available_quantity: 8 },
-            { id: 4, book_name: 'The Hobbit', author: 'J.R.R. Tolkien', category: 'General', total_quantity: 4, available_quantity: 4 },
-            { id: 5, book_name: 'Project Hail Mary', author: 'Andy Weir', category: 'General', total_quantity: 6, available_quantity: 6 }
+    const bookCheck = await sqliteDb.get("SELECT id FROM books LIMIT 1");
+    if (!bookCheck) {
+        const books = [
+            ['The Great Gatsby', 'F. Scott Fitzgerald', 'General', 5, 5],
+            ['To Kill a Mockingbird', 'Harper Lee', 'General', 3, 3],
+            ['1984', 'George Orwell', 'General', 8, 8],
+            ['The Hobbit', 'J.R.R. Tolkien', 'General', 4, 4],
+            ['Project Hail Mary', 'Andy Weir', 'General', 6, 6]
         ];
-    }
-
-    memoryDb = { data, dbPath };
-    saveJsonDb();
-}
-
-function saveJsonDb() {
-    if (!memoryDb) return;
-    try {
-        fs.writeFileSync(memoryDb.dbPath, JSON.stringify(memoryDb.data, null, 2));
-    } catch (e) {
-        // Ignored on read-only environments
+        for (const b of books) {
+            await sqliteDb.run(
+                "INSERT INTO books (book_name, author, category, total_quantity, available_quantity) VALUES (?, ?, ?, ?, ?)",
+                b
+            );
+        }
+        console.log('✅ Demo books seeded in SQLite Database.');
     }
 }
 
 // Universal query interface matching mysql2 promise API: [rows, fields]
 const dbWrapper = {
     async query(sql, params = []) {
-        if (!usePureJs && promisePool) {
+        if (!useSqlite) {
             try {
                 return await promisePool.query(sql, params);
             } catch (mysqlErr) {
-                console.log('MySQL query failed, falling back to Pure JS DB:', mysqlErr.message);
-                usePureJs = true;
-                await initPureJsDb();
-            }
-        }
-
-        if (!memoryDb) await initPureJsDb();
-
-        const cleanSql = sql.trim().replace(/\s+/g, ' ');
-        const upperSql = cleanSql.toUpperCase();
-
-        // 1. SELECT Query Processing
-        if (upperSql.startsWith('SELECT')) {
-            let table = 'users';
-            if (upperSql.includes('FROM USERS')) table = 'users';
-            else if (upperSql.includes('FROM BOOKS')) table = 'books';
-            else if (upperSql.includes('FROM STATIONARY_ITEMS')) table = 'stationary_items';
-            else if (upperSql.includes('FROM STATIONARY_REQUESTS')) table = 'stationary_requests';
-            else if (upperSql.includes('FROM STATIONARY_LEDGER')) table = 'stationary_ledger';
-
-            let list = [...(memoryDb.data[table] || [])];
-
-            // WHERE email = ?
-            if (upperSql.includes('WHERE EMAIL = ?') && params.length > 0) {
-                list = list.filter(item => item.email && item.email.toLowerCase() === String(params[0]).toLowerCase());
-            }
-            // WHERE id = ?
-            else if (upperSql.includes('WHERE ID = ?') && params.length > 0) {
-                list = list.filter(item => item.id == params[0]);
-            }
-            // WHERE user_id = ?
-            else if (upperSql.includes('WHERE USER_ID = ?') && params.length > 0) {
-                list = list.filter(item => item.user_id == params[0]);
-            }
-
-            // COUNT(*) aggregation check
-            if (upperSql.includes('COUNT(*)')) {
-                return [[{ count: list.length, 'COUNT(*)': list.length }], []];
-            }
-
-            return [list, []];
-        }
-
-        // 2. INSERT Query Processing
-        if (upperSql.startsWith('INSERT INTO')) {
-            let table = 'users';
-            if (upperSql.includes('INTO USERS')) table = 'users';
-            else if (upperSql.includes('INTO BOOKS')) table = 'books';
-            else if (upperSql.includes('INTO STATIONARY_ITEMS')) table = 'stationary_items';
-            else if (upperSql.includes('INTO STATIONARY_REQUESTS')) table = 'stationary_requests';
-            else if (upperSql.includes('INTO STATIONARY_LEDGER')) table = 'stationary_ledger';
-
-            const newId = (memoryDb.data[table].length > 0 ? Math.max(...memoryDb.data[table].map(i => i.id || 0)) : 0) + 1;
-            let newItem = { id: newId, created_at: new Date().toISOString() };
-
-            if (table === 'users') {
-                newItem = {
-                    ...newItem,
-                    name: params[0] || 'User',
-                    email: params[1] || '',
-                    password: params[2] || '',
-                    role: params[3] || 'student',
-                    branch: params[4] || null,
-                    year: params[5] || null,
-                    division: params[6] || null,
-                    is_verified: params[7] !== undefined ? params[7] : 1,
-                    profile_image: params[8] || null
-                };
-            } else if (table === 'stationary_requests') {
-                newItem = {
-                    ...newItem,
-                    user_id: params[0],
-                    item_id: params[1],
-                    quantity: params[2] || 1,
-                    reason: params[3] || '',
-                    status: 'Pending',
-                    requested_at: new Date().toISOString()
-                };
-            } else if (table === 'stationary_ledger') {
-                newItem = {
-                    ...newItem,
-                    item_id: params[0],
-                    transaction_type: params[1],
-                    received_qty: params[2] || 0,
-                    issued_qty: params[3] || 0,
-                    previous_balance: params[4] || 0,
-                    new_balance: params[5] || 0,
-                    reference_no: params[6] || '',
-                    user_id: params[7] || null,
-                    notes: params[8] || ''
-                };
-            } else {
-                newItem = { ...newItem, params };
-            }
-
-            memoryDb.data[table].push(newItem);
-            saveJsonDb();
-
-            return [{ insertId: newId, affectedRows: 1 }, []];
-        }
-
-        // 3. UPDATE Query Processing
-        if (upperSql.startsWith('UPDATE')) {
-            let table = 'users';
-            if (upperSql.includes('UPDATE USERS')) table = 'users';
-            else if (upperSql.includes('UPDATE BOOKS')) table = 'books';
-            else if (upperSql.includes('UPDATE STATIONARY_ITEMS')) table = 'stationary_items';
-            else if (upperSql.includes('UPDATE STATIONARY_REQUESTS')) table = 'stationary_requests';
-
-            const lastParam = params[params.length - 1];
-            if (lastParam) {
-                const target = memoryDb.data[table].find(i => i.id == lastParam);
-                if (target && upperSql.includes('STATUS = ?')) {
-                    target.status = params[0];
-                    target.acted_at = new Date().toISOString();
+                // Fallback to SQLite if MySQL query fails or connection is lost
+                if (!sqliteDb) {
+                    useSqlite = true;
+                    await initSqliteFallback();
+                } else {
+                    useSqlite = true;
                 }
             }
-            saveJsonDb();
-            return [{ affectedRows: 1 }, []];
         }
 
-        // 4. DELETE Query Processing
-        if (upperSql.startsWith('DELETE')) {
-            return [{ affectedRows: 1 }, []];
+        // SQLite Execution Mode
+        if (!sqliteDb) {
+            await initSqliteFallback();
         }
 
-        return [[], []];
+        // Sanitize SQL statement from MySQL specific syntax
+        let cleanSql = sql
+            .replace(/AUTO_INCREMENT/gi, 'AUTOINCREMENT')
+            .replace(/CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/gi, 'CURRENT_TIMESTAMP');
+
+        const trimmedSql = cleanSql.trim().toUpperCase();
+
+        if (trimmedSql.startsWith('SELECT') || trimmedSql.startsWith('SHOW') || trimmedSql.startsWith('PRAGMA')) {
+            const rows = await sqliteDb.all(cleanSql, params);
+            return [rows, []];
+        } else {
+            const result = await sqliteDb.run(cleanSql, params);
+            return [{
+                insertId: result.lastID,
+                affectedRows: result.changes
+            }, []];
+        }
     }
 };
 
