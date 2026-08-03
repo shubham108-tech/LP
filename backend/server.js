@@ -73,42 +73,38 @@ if (!process.env.VERCEL) {
 const engagementRoutes = require('./routes/engagementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/books', bookRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/issues', issueRoutes);
-app.use('/api/admin', dashboardRoutes);
-app.use('/api/suggestions', suggestionRoutes);
-app.use('/api/discussions', discussionRoutes);
-app.use('/api', reviewRoutes);
-app.use('/api/engineering', require('./routes/engineeringRoutes'));
-app.use('/api/elearning', elearningRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/schedules', scheduleRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/engagement', engagementRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/feedback', require('./routes/feedbackRoutes'));
-app.use('/api/gamification', require('./routes/gamificationRoutes'));
-app.use('/api/stationary', require('./routes/stationaryRoutes'));
+// API Routes (Supporting both /api/* and direct /* for Vercel rewrites)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/books', '/books'], bookRoutes);
+app.use(['/api/requests', '/requests'], requestRoutes);
+app.use(['/api/issues', '/issues'], issueRoutes);
+app.use(['/api/admin', '/admin'], dashboardRoutes);
+app.use(['/api/suggestions', '/suggestions'], suggestionRoutes);
+app.use(['/api/discussions', '/discussions'], discussionRoutes);
+app.use(['/api', '/'], reviewRoutes);
+app.use(['/api/engineering', '/engineering'], require('./routes/engineeringRoutes'));
+app.use(['/api/elearning', '/elearning'], elearningRoutes);
+app.use(['/api/exams', '/exams'], examRoutes);
+app.use(['/api/schedules', '/schedules'], scheduleRoutes);
+app.use(['/api/analytics', '/analytics'], analyticsRoutes);
+app.use(['/api/engagement', '/engagement'], engagementRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
+app.use(['/api/feedback', '/feedback'], require('./routes/feedbackRoutes'));
+app.use(['/api/gamification', '/gamification'], require('./routes/gamificationRoutes'));
+app.use(['/api/stationary', '/stationary'], require('./routes/stationaryRoutes'));
 
+// React Frontend Serve (Only for local standalone Node server, skip on Vercel CDN)
+if (!process.env.VERCEL) {
+    const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
+        ? path.join(__dirname, '../frontend/dist')
+        : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
 
-// ===================================================
-// ✅ ADDED: React Frontend Serve Karne Ka Code
-// ===================================================
+    app.use(express.static(frontendDistPath));
 
-// React build folder (dist/client) ko static serve karega
-const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
-    ? path.join(__dirname, '../frontend/dist')
-    : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
-
-app.use(express.static(frontendDistPath));
-
-// React Router support (important)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
-});
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+}
 
 // ===================================================
 // END OF ADDED CODE
