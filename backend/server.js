@@ -20,6 +20,9 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 
+// Trust proxy for Vercel / reverse proxy deployment
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -28,42 +31,44 @@ const { authenticateToken } = require('./middleware/authMiddleware');
 
 app.use('/uploads', (req, res, next) => {
     const ext = path.extname(req.path).toLowerCase(); // ⚡ changed require('path') to path
-    const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-
-    if (imageExts.includes(ext)) {
-        return next();
+    if (ext === '.pdf') {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
     }
-
-    authenticateToken(req, res, next);
-}, express.static('uploads'));
+    next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 const rateLimit = require('express-rate-limit');
 
-// Rate Limits
+// Rate Limiters
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 50,
-    message: { message: 'Too many login attempts. Try again later.' }
+    max: 100,
+    message: { message: 'Too many attempts from this IP, please try again after 15 minutes' },
+    validate: false
 });
 
 const otpLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 5,
-    message: { message: 'Too many OTP requests. Try again later.' }
+    max: 20,
+    message: { message: 'Too many OTP requests. Try again later.' },
+    validate: false
 });
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
-    message: { message: 'Too many requests. Try again later.' }
+    message: { message: 'Too many requests. Try again later.' },
+    validate: false
 });
 
-// Apply Rate Limits
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', otpLimiter); // Protect public register OTP
-app.use('/api/auth/resend-otp', otpLimiter); // Protect public resend OTP
-// The rest (like bulk upload, user list) will fall under apiLimiter
-app.use('/api', apiLimiter);
+// Apply Rate Limits (skip on Vercel serverless functions)
+if (!process.env.VERCEL) {
+    app.use('/api/auth/login', authLimiter);
+    app.use('/api/auth/register', otpLimiter);
+    app.use('/api/auth/resend-otp', otpLimiter);
+    app.use('/api', apiLimiter);
+}
 
 const engagementRoutes = require('./routes/engagementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
