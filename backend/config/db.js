@@ -1,4 +1,5 @@
 const mysql = require('mysql2');
+const { Pool: PgPool } = require('pg');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
@@ -6,36 +7,148 @@ const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
-let useFallback = false;
+let dbMode = 'mysql'; // 'postgres', 'mysql', 'fallback'
+let pgPool = null;
+let mysqlPool = null;
 let dbData = null;
 let dbFilePath = null;
 
-const mysqlPool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
-    database: process.env.DB_NAME || 'library_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+const pgUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const isPg = Boolean(pgUrl || process.env.POSTGRES_HOST);
 
-const promisePool = mysqlPool.promise();
-
-// Check MySQL connection asynchronously on startup
-(async () => {
-    try {
-        if (!process.env.DB_HOST && process.env.VERCEL) {
-            throw new Error('No DB_HOST configured on Vercel environment');
+if (isPg) {
+    dbMode = 'postgres';
+    console.log('⚡ Vercel Postgres Database environment detected!');
+    pgPool = new PgPool({
+        connectionString: pgUrl,
+        ssl: { rejectUnauthorized: false }
+    });
+    initPgSchema();
+} else {
+    mysqlPool = mysql.createPool({
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
+        database: process.env.DB_NAME || 'library_db',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    });
+    
+    (async () => {
+        try {
+            if (!process.env.DB_HOST && process.env.VERCEL) {
+                throw new Error('No DB_HOST configured on Vercel environment');
+            }
+            await mysqlPool.promise().query('SELECT 1');
+            console.log('✅ Connected to MySQL Database.');
+        } catch (err) {
+            console.log('⚠️ MySQL/Postgres unavailable. Using Portable Pure-JS Engine...');
+            dbMode = 'fallback';
+            initPureJsFallback();
         }
-        await promisePool.query('SELECT 1');
-        console.log('✅ Connected to MySQL Database.');
-    } catch (err) {
-        console.log('⚠️ MySQL Connection unavailable. Falling back to Portable Pure-JS Engine...');
-        useFallback = true;
-        initPureJsFallback();
+    })();
+}
+
+async function initPgSchema() {
+    try {
+        await pgPool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(50) NOT NULL DEFAULT 'student',
+                branch VARCHAR(100),
+                year VARCHAR(50),
+                division VARCHAR(50),
+                phone_number VARCHAR(20),
+                otp VARCHAR(6),
+                otp_expiry TIMESTAMP,
+                is_verified BOOLEAN DEFAULT TRUE,
+                profile_image VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS books (
+                id SERIAL PRIMARY KEY,
+                book_name VARCHAR(255) NOT NULL,
+                author VARCHAR(255) NOT NULL,
+                category VARCHAR(100) DEFAULT 'General',
+                total_quantity INT NOT NULL,
+                available_quantity INT NOT NULL,
+                image_url VARCHAR(255),
+                pdf_url VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS stationary_items (
+                id SERIAL PRIMARY KEY,
+                item_name VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                total_stock INT NOT NULL DEFAULT 0,
+                available_stock INT NOT NULL DEFAULT 0,
+                min_stock_limit INT NOT NULL DEFAULT 5,
+                unit VARCHAR(50) NOT NULL DEFAULT 'pcs',
+                bill_number VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS stationary_requests (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                item_id INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                reason TEXT,
+                status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                acted_at TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS stationary_ledger (
+                id SERIAL PRIMARY KEY,
+                item_id INT NOT NULL,
+                transaction_type VARCHAR(50) NOT NULL,
+                received_qty INT DEFAULT 0,
+                issued_qty INT DEFAULT 0,
+                previous_balance INT NOT NULL DEFAULT 0,
+                new_balance INT NOT NULL DEFAULT 0,
+                reference_no VARCHAR(255),
+                user_id INT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Check & Seed Admin in Vercel Postgres
+        const adminRes = await pgPool.query("SELECT id FROM users WHERE email = 'admin@library.com'");
+        if (adminRes.rows.length === 0) {
+            const hashAdmin = bcrypt.hashSync('admin123', 10);
+            const hashPass = bcrypt.hashSync('password123', 10);
+
+            await pgPool.query(
+                "INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)",
+                ['System Admin', 'admin@library.com', hashAdmin, 'admin']
+            );
+            await pgPool.query(
+                "INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)",
+                ['HOD Engineering', 'sagar@library.com', hashPass, 'hod']
+            );
+            await pgPool.query(
+                "INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)",
+                ['Prof. Powar', 'powar@library.com', hashPass, 'teacher']
+            );
+            await pgPool.query(
+                "INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)",
+                ['Shubham Bhendavade', 'shubham@library.com', hashPass, 'student']
+            );
+            console.log('✅ Demo accounts seeded in Vercel Postgres Database!');
+        }
+    } catch (e) {
+        console.error('Vercel Postgres Init Error:', e.message);
     }
-})();
+}
 
 function initPureJsFallback() {
     dbFilePath = process.env.VERCEL
@@ -82,7 +195,6 @@ function initPureJsFallback() {
         };
         savePureJsData();
     }
-    console.log(`✅ Portable Pure-JS Database Engine ready at ${dbFilePath}`);
 }
 
 function savePureJsData() {
@@ -96,20 +208,37 @@ function savePureJsData() {
 // Universal query interface matching mysql2 promise API: [rows, fields]
 const dbWrapper = {
     async query(sql, params = []) {
-        if (!useFallback) {
+        if (dbMode === 'postgres' && pgPool) {
             try {
-                return await promisePool.query(sql, params);
+                let countParamIndex = 1;
+                let pgSql = sql.replace(/\?/g, () => `$${countParamIndex++}`);
+                pgSql = pgSql.replace(/`([a-zA-Z0-9_]+)`/g, '"$1"');
+
+                const res = await pgPool.query(pgSql, params);
+                if (pgSql.trim().toUpperCase().startsWith('INSERT')) {
+                    return [{ insertId: res.rows[0]?.id || 1, affectedRows: res.rowCount }, []];
+                }
+                return [res.rows, res.fields];
+            } catch (err) {
+                console.error('Postgres Query Error:', err.message);
+                throw err;
+            }
+        }
+
+        if (dbMode === 'mysql') {
+            try {
+                return await mysqlPool.promise().query(sql, params);
             } catch (mysqlErr) {
-                useFallback = true;
+                dbMode = 'fallback';
                 if (!dbData) initPureJsFallback();
             }
         }
 
+        // Pure JS Fallback Mode
         if (!dbData) initPureJsFallback();
 
         const sqlUpper = sql.trim().toUpperCase();
 
-        // 1. CREATE TABLE / ALTER TABLE
         if (sqlUpper.startsWith('CREATE TABLE') || sqlUpper.startsWith('ALTER TABLE') || sqlUpper.startsWith('USE') || sqlUpper.startsWith('CREATE DATABASE')) {
             const tableMatch = sql.match(/CREATE TABLE (IF NOT EXISTS )?`?([a-zA-Z0-9_]+)`?/i);
             if (tableMatch && tableMatch[2]) {
@@ -120,7 +249,6 @@ const dbWrapper = {
             return [[], []];
         }
 
-        // 2. SELECT QUERIES
         if (sqlUpper.startsWith('SELECT')) {
             let table = 'users';
             if (sqlUpper.includes('FROM BOOKS')) table = 'books';
@@ -132,7 +260,6 @@ const dbWrapper = {
 
             let items = dbData[table] || [];
 
-            // Simple WHERE filtering
             if (sqlUpper.includes('WHERE EMAIL = ?') && params.length > 0) {
                 items = items.filter(u => u.email === params[0]);
             } else if (sqlUpper.includes('WHERE ID = ?') && params.length > 0) {
@@ -143,7 +270,6 @@ const dbWrapper = {
                 items = items.filter(u => u.book_name === params[0]);
             }
 
-            // Handle SELECT COUNT(*)
             if (sqlUpper.includes('COUNT(*)')) {
                 return [[{ count: items.length, 'COUNT(*)': items.length }], []];
             }
@@ -151,7 +277,6 @@ const dbWrapper = {
             return [JSON.parse(JSON.stringify(items)), []];
         }
 
-        // 3. INSERT QUERIES
         if (sqlUpper.startsWith('INSERT INTO')) {
             let table = 'users';
             if (sqlUpper.includes('INTO BOOKS')) table = 'books';
@@ -200,7 +325,6 @@ const dbWrapper = {
             return [{ insertId: newId, affectedRows: 1 }, []];
         }
 
-        // 4. UPDATE / DELETE QUERIES
         if (sqlUpper.startsWith('UPDATE') || sqlUpper.startsWith('DELETE')) {
             savePureJsData();
             return [{ insertId: 0, affectedRows: 1 }, []];
