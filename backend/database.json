@@ -1,0 +1,136 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "System Admin",
+      "email": "admin@library.com",
+      "password": "$2b$10$MleamwFspL9pOuEhdg9jsOL5PrWUHd7Zwr8Yy5fdN16ci62DKsUJC",
+      "role": "admin",
+      "is_verified": 1,
+      "created_at": "2026-08-03T06:59:22.339Z"
+    },
+    {
+      "id": 2,
+      "name": "HOD Engineering",
+      "email": "sagar@library.com",
+      "password": "$2b$10$IbK8w4JJu8Dgk.TS1xjPNu0vOSFRteSmekpM8zJBjxbJwaWflvRPu",
+      "role": "hod",
+      "is_verified": 1,
+      "created_at": "2026-08-03T06:59:22.346Z"
+    },
+    {
+      "id": 3,
+      "name": "Prof. Powar",
+      "email": "powar@library.com",
+      "password": "$2b$10$IbK8w4JJu8Dgk.TS1xjPNu0vOSFRteSmekpM8zJBjxbJwaWflvRPu",
+      "role": "teacher",
+      "is_verified": 1,
+      "created_at": "2026-08-03T06:59:22.346Z"
+    },
+    {
+      "id": 4,
+      "name": "Shubham Bhendavade",
+      "email": "shubham@library.com",
+      "password": "$2b$10$IbK8w4JJu8Dgk.TS1xjPNu0vOSFRteSmekpM8zJBjxbJwaWflvRPu",
+      "role": "student",
+      "is_verified": 1,
+      "created_at": "2026-08-03T06:59:22.346Z"
+    }
+  ],
+  "books": [
+    {
+      "id": 1,
+      "book_name": "The Great Gatsby",
+      "author": "F. Scott Fitzgerald",
+      "category": "General",
+      "total_quantity": 5,
+      "available_quantity": 5
+    },
+    {
+      "id": 2,
+      "book_name": "To Kill a Mockingbird",
+      "author": "Harper Lee",
+      "category": "General",
+      "total_quantity": 3,
+      "available_quantity": 3
+    },
+    {
+      "id": 3,
+      "book_name": "1984",
+      "author": "George Orwell",
+      "category": "General",
+      "total_quantity": 8,
+      "available_quantity": 8
+    },
+    {
+      "id": 4,
+      "book_name": "The Hobbit",
+      "author": "J.R.R. Tolkien",
+      "category": "General",
+      "total_quantity": 4,
+      "available_quantity": 4
+    },
+    {
+      "id": 5,
+      "book_name": "Project Hail Mary",
+      "author": "Andy Weir",
+      "category": "General",
+      "total_quantity": 6,
+      "available_quantity": 6
+    }
+  ],
+  "stationary_items": [
+    {
+      "id": 1,
+      "item_name": "Blue Ballpoint Pens (Box of 10)",
+      "category": "Consumable",
+      "total_stock": 100,
+      "available_stock": 100,
+      "min_stock_limit": 20,
+      "unit": "boxes",
+      "bill_number": "BILL-2026-001"
+    },
+    {
+      "id": 2,
+      "item_name": "Black Gel Pens (Box of 10)",
+      "category": "Consumable",
+      "total_stock": 80,
+      "available_stock": 80,
+      "min_stock_limit": 15,
+      "unit": "boxes",
+      "bill_number": "BILL-2026-001"
+    },
+    {
+      "id": 3,
+      "item_name": "A4 Paper Rim (500 Sheets)",
+      "category": "Consumable",
+      "total_stock": 50,
+      "available_stock": 50,
+      "min_stock_limit": 10,
+      "unit": "rims",
+      "bill_number": "BILL-2026-002"
+    },
+    {
+      "id": 4,
+      "item_name": "Whiteboard Markers (Set of 4)",
+      "category": "Consumable",
+      "total_stock": 60,
+      "available_stock": 60,
+      "min_stock_limit": 10,
+      "unit": "sets",
+      "bill_number": "BILL-2026-003"
+    },
+    {
+      "id": 5,
+      "item_name": "Attendance Register Notebook",
+      "category": "Consumable",
+      "total_stock": 40,
+      "available_stock": 40,
+      "min_stock_limit": 5,
+      "unit": "pcs",
+      "bill_number": "BILL-2026-004"
+    }
+  ],
+  "stationary_requests": [],
+  "stationary_ledger": []
+}
