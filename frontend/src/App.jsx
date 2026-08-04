@@ -86,7 +86,7 @@ function App() {
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
                         <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
+                        <Route path="/register" element={<Navigate to="/login" replace />} />
                         <Route path="/verify-otp" element={<OTPVerification />} />
                         <Route path="/" element={<Landing />} />
 

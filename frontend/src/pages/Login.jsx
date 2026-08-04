@@ -69,11 +69,8 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-blue-200">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-white font-semibold hover:underline">
-                        Register here
-                    </Link>
+                <div className="mt-6 text-center text-xs text-blue-200/80">
+                    Contact System Administrator for account access.
                 </div>
                 <DeveloperCredit />
             </div>

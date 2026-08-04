@@ -40,11 +40,8 @@ const Landing = () => {
                     LibraryPro
                 </div>
                 <div className="space-x-4">
-                    <Link to="/login" className="px-6 py-2.5 rounded-full border border-fuchsia-400/40 hover:bg-white/10 font-semibold transition-colors">
+                    <Link to="/login" className="px-6 py-2.5 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 transition-colors shadow-lg shadow-fuchsia-600/30 font-bold">
                         Login
-                    </Link>
-                    <Link to="/register" className="px-6 py-2.5 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 transition-colors shadow-lg shadow-fuchsia-600/30 font-bold">
-                        Register
                     </Link>
                 </div>
             </nav>
@@ -64,11 +61,8 @@ const Landing = () => {
                 </p>
 
                 <div className="flex flex-col md:flex-row gap-4 justify-center">
-                    <Link to="/register" className="px-8 py-4 bg-gradient-to-r from-fuchsia-600 to-purple-600 rounded-xl font-bold text-lg hover:from-fuchsia-500 hover:to-purple-500 shadow-xl shadow-fuchsia-600/30">
-                        Get Started
-                    </Link>
-                    <Link to="/login" className="px-8 py-4 bg-purple-950/60 rounded-xl font-bold text-lg hover:bg-purple-900/80 border border-purple-700/50 backdrop-blur-md">
-                        Teacher Login
+                    <Link to="/login" className="px-8 py-4 bg-gradient-to-r from-fuchsia-600 to-purple-600 rounded-xl font-bold text-lg hover:from-fuchsia-500 hover:to-purple-500 shadow-xl shadow-fuchsia-600/30">
+                        Login to Portal
                     </Link>
                 </div>
             </div>
