@@ -145,21 +145,22 @@ exports.getDashboardData = async (req, res) => {
 exports.getStats = async (req, res) => {
     try {
         // Physical Books
-        const [books] = await db.query('SELECT SUM(total_quantity) as count FROM books');
+        const [books] = await db.query('SELECT COALESCE(SUM(total_quantity), 0) as count FROM books');
         // Digital Journals / Notes
         const [notes] = await db.query('SELECT COUNT(*) as count FROM notes');
         // Research Papers / Projects
         const [projects] = await db.query('SELECT COUNT(*) as count FROM projects');
         // Active Members (Users)
-        const [users] = await db.query('SELECT COUNT(*) as count FROM users WHERE role != "admin"');
+        const [users] = await db.query("SELECT COUNT(*) as count FROM users WHERE role != 'admin'");
 
         res.json({
-            totalBooks: books[0].count || 0,
-            digitalJournals: notes[0].count || 0,
-            researchPapers: projects[0].count || 0,
-            activeMembers: users[0].count || 0
+            totalBooks: parseInt(books[0]?.count || 0, 10),
+            digitalJournals: parseInt(notes[0]?.count || 0, 10),
+            researchPapers: parseInt(projects[0]?.count || 0, 10),
+            activeMembers: parseInt(users[0]?.count || 0, 10)
         });
     } catch (error) {
+        console.error('getStats error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

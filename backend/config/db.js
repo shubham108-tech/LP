@@ -121,6 +121,49 @@ async function initPgSchema() {
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS book_issues (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
+                issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                return_date TIMESTAMP,
+                returned INT DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'issued',
+                fine DECIMAL(10,2) DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS book_requests (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
+                request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS notes (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                subject VARCHAR(255),
+                branch VARCHAR(100),
+                year VARCHAR(50),
+                semester VARCHAR(50),
+                file_url VARCHAR(255),
+                resource_type VARCHAR(50) DEFAULT 'note',
+                uploaded_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS projects (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                branch VARCHAR(100),
+                student_id INT,
+                guide_id INT,
+                file_url VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
 
         // Check & Seed Admin in Vercel Postgres
@@ -261,6 +304,13 @@ const dbWrapper = {
                 let countParamIndex = 1;
                 let pgSql = sql.replace(/\?/g, () => `$${countParamIndex++}`);
                 pgSql = pgSql.replace(/`([a-zA-Z0-9_]+)`/g, '"$1"');
+
+                // MySQL to Postgres compatibility rewrites
+                pgSql = pgSql.replace(/DATE_ADD\(([^,]+),\s*INTERVAL\s+(\d+)\s+DAY\)/gi, "($1 + INTERVAL '$2 days')");
+                pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*['"]%Y-%m['"]\)/gi, "TO_CHAR($1, 'YYYY-MM')");
+                pgSql = pgSql.replace(/"admin"/g, "'admin'");
+                pgSql = pgSql.replace(/"teacher"/g, "'teacher'");
+                pgSql = pgSql.replace(/"student"/g, "'student'");
 
                 const res = await pgPool.query(pgSql, params);
                 if (pgSql.trim().toUpperCase().startsWith('INSERT')) {
