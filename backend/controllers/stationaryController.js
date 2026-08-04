@@ -118,7 +118,7 @@ exports.deleteItem = async (req, res) => {
 
 // Request an item (Teacher / Student / Staff)
 exports.requestItem = async (req, res) => {
-    const { item_id, quantity, reason } = req.body;
+    const { item_id, quantity, reason, unit } = req.body;
     const user_id = req.user.id;
 
     if (!item_id || !quantity) {
@@ -138,16 +138,18 @@ exports.requestItem = async (req, res) => {
         }
 
         // Check if available stock is enough
-        const [item] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [item_id]);
+        const [item] = await db.query('SELECT available_stock, unit FROM stationary_items WHERE id = ?', [item_id]);
         if (item.length === 0) return res.status(404).json({ message: 'Item not found' });
 
         if (item[0].available_stock < quantity) {
             return res.status(400).json({ message: 'Not enough stock available for this request' });
         }
 
+        const selectedUnit = unit || item[0]?.unit || 'pcs';
+
         await db.query(
-            'INSERT INTO stationary_requests (user_id, item_id, quantity, reason) VALUES (?, ?, ?, ?)',
-            [user_id, item_id, quantity, reason]
+            'INSERT INTO stationary_requests (user_id, item_id, quantity, unit, reason) VALUES (?, ?, ?, ?, ?)',
+            [user_id, item_id, quantity, selectedUnit, reason]
         );
         res.status(201).json({ message: 'Request submitted successfully' });
     } catch (error) {
@@ -159,8 +161,8 @@ exports.requestItem = async (req, res) => {
 exports.getRequests = async (req, res) => {
     try {
         let query = `
-            SELECT r.*, 
-                   i.item_name, i.category, i.unit,
+            SELECT r.*, COALESCE(r.unit, i.unit, 'pcs') as unit,
+                   i.item_name, i.category,
                    u.name as user_name, u.email as user_email, u.role as user_role
             FROM stationary_requests r
             JOIN stationary_items i ON r.item_id = i.id

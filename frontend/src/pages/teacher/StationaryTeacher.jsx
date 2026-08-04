@@ -17,7 +17,17 @@ const StationaryTeacher = () => {
     // Form states
     const [selectedItem, setSelectedItem] = useState('');
     const [quantity, setQuantity] = useState('1');
+    const [unit, setUnit] = useState('pcs');
     const [reason, setReason] = useState('');
+
+    useEffect(() => {
+        if (selectedItem && items.length > 0) {
+            const found = items.find(i => i.id.toString() === selectedItem.toString());
+            if (found && found.unit) {
+                setUnit(found.unit);
+            }
+        }
+    }, [selectedItem, items]);
 
     const itemConsumption = useMemo(() => {
         if (!requests.length) return [];
@@ -50,7 +60,10 @@ const StationaryTeacher = () => {
             const itemsList = Array.isArray(itemsRes.data) ? itemsRes.data : [];
             setItems(itemsList);
             setRequests(Array.isArray(reqsRes.data) ? reqsRes.data : []);
-            if (itemsList.length > 0) setSelectedItem(itemsList[0].id.toString());
+            if (itemsList.length > 0) {
+                setSelectedItem(itemsList[0].id.toString());
+                if (itemsList[0].unit) setUnit(itemsList[0].unit);
+            }
         } catch (error) {
             toast.error('Failed to load stationary data');
         } finally {
@@ -67,6 +80,7 @@ const StationaryTeacher = () => {
             await api.post('/stationary/requests', {
                 item_id: Number(selectedItem),
                 quantity: Number(quantity),
+                unit: unit,
                 reason: reason
             });
             toast.success('Stationary Request submitted successfully!');
@@ -197,16 +211,38 @@ const StationaryTeacher = () => {
                                     ))}
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Quantity Required</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                    value={quantity}
-                                    onChange={e => setQuantity(e.target.value)}
-                                    required
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        value={quantity}
+                                        onChange={e => setQuantity(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Unit</label>
+                                    <select
+                                        className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 font-semibold text-indigo-700"
+                                        value={unit}
+                                        onChange={e => setUnit(e.target.value)}
+                                        required
+                                    >
+                                        <option value="pcs">pcs (Pieces)</option>
+                                        <option value="box">box (Boxes)</option>
+                                        <option value="rim">rim (Rims)</option>
+                                        <option value="pack">pack (Packs)</option>
+                                        <option value="set">set (Sets)</option>
+                                        <option value="bundle">bundle (Bundles)</option>
+                                        <option value="kg">kg (Kilograms)</option>
+                                        <option value="litres">litres (Litres)</option>
+                                        <option value="meter">meter (Meters)</option>
+                                        <option value="roll">roll (Rolls)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Reason / Course / Lab Purpose</label>

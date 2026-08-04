@@ -98,15 +98,17 @@ async function initPgSchema() {
             );
 
             CREATE TABLE IF NOT EXISTS stationary_requests (
-                id SERIAL PRIMARY KEY,
-                user_id INT NOT NULL,
-                item_id INT NOT NULL,
-                quantity INT NOT NULL DEFAULT 1,
-                reason TEXT,
-                status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                acted_at TIMESTAMP
-            );
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            item_id INT NOT NULL,
+            quantity INT NOT NULL DEFAULT 1,
+            unit VARCHAR(50) DEFAULT 'pcs',
+            reason TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+            requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            acted_at TIMESTAMP
+        );
+        ALTER TABLE stationary_requests ADD COLUMN IF NOT EXISTS unit VARCHAR(50) DEFAULT 'pcs';
 
             CREATE TABLE IF NOT EXISTS stationary_ledger (
                 id SERIAL PRIMARY KEY,
