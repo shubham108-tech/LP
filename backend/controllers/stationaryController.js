@@ -12,7 +12,7 @@ exports.getAllItems = async (req, res) => {
     }
 };
 
-// Add new item
+// Add new item (with Smart Stock Merge & Bill Number Update)
 exports.addItem = async (req, res) => {
     const { item_name, category, total_stock, min_stock_limit, unit, bill_number } = req.body;
     const user_id = req.user?.id || null;
@@ -22,10 +22,69 @@ exports.addItem = async (req, res) => {
     }
 
     try {
-        const stockQty = Number(total_stock);
+        const stockQty = Number(total_stock) || 0;
+        const cleanName = item_name.trim();
+
+        // Check if an item with the same name already exists (case insensitive)
+        const [existing] = await db.query(
+            'SELECT * FROM stationary_items WHERE LOWER(TRIM(item_name)) = LOWER(TRIM(?))',
+            [cleanName]
+        );
+
+        if (existing.length > 0) {
+            const item = existing[0];
+            const newTotal = Number(item.total_stock) + stockQty;
+            const newAvailable = Number(item.available_stock) + stockQty;
+            const newBill = bill_number && bill_number.trim() !== '' ? bill_number.trim() : item.bill_number;
+
+            // Update existing item's stock, bill_number, and details
+            await db.query(
+                `UPDATE stationary_items 
+                 SET total_stock = ?, 
+                     available_stock = ?, 
+                     bill_number = ?, 
+                     category = COALESCE(?, category), 
+                     min_stock_limit = COALESCE(?, min_stock_limit), 
+                     unit = COALESCE(?, unit)
+                 WHERE id = ?`,
+                [
+                    newTotal, 
+                    newAvailable, 
+                    newBill, 
+                    category || null, 
+                    min_stock_limit || null, 
+                    unit || null, 
+                    item.id
+                ]
+            );
+
+            // Record entry in stationary_ledger
+            await db.query(
+                `INSERT INTO stationary_ledger 
+                (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
+                VALUES (?, 'RECEIVED', ?, 0, ?, ?, ?, ?, ?)`,
+                [
+                    item.id, 
+                    stockQty, 
+                    item.available_stock, 
+                    newAvailable, 
+                    newBill || 'RESTOCK', 
+                    user_id, 
+                    `Stock merged (+${stockQty} ${unit || item.unit}). Updated Bill: ${newBill || 'N/A'}`
+                ]
+            );
+
+            return res.status(200).json({
+                message: `Existing item "${item.item_name}" found! Stock increased by +${stockQty} (Total Available: ${newAvailable} ${unit || item.unit}). Bill number updated to: ${newBill || 'N/A'}`,
+                itemId: item.id,
+                merged: true
+            });
+        }
+
+        // Otherwise, insert new item
         const [result] = await db.query(
             'INSERT INTO stationary_items (item_name, category, total_stock, available_stock, min_stock_limit, unit, bill_number) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [item_name, category || 'Consumable', stockQty, stockQty, min_stock_limit || 5, unit || 'pcs', bill_number || null]
+            [cleanName, category || 'Consumable', stockQty, stockQty, min_stock_limit || 5, unit || 'pcs', bill_number || null]
         );
 
         const itemId = result.insertId;
@@ -38,7 +97,7 @@ exports.addItem = async (req, res) => {
             [itemId, stockQty, stockQty, bill_number || 'INITIAL', user_id]
         );
 
-        res.status(201).json({ message: 'Stationary item added successfully', itemId });
+        res.status(201).json({ message: `Stationary item "${cleanName}" added successfully`, itemId, merged: false });
     } catch (error) {
         console.error('ADD ITEM ERROR:', error);
         res.status(500).json({ message: 'Error adding item', error: error.message });
