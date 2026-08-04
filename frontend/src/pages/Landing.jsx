@@ -77,10 +77,10 @@ const Landing = () => {
             <div className="container mx-auto px-6 pb-20 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {[
-                        { label: "Total Books", value: stats.totalBooks || "0", icon: "📚", color: "from-fuchsia-400 to-pink-300" },
-                        { label: "Digital Journals", value: stats.digitalJournals || "0", icon: "💻", color: "from-purple-400 to-fuchsia-300" },
-                        { label: "Research Papers", value: stats.researchPapers || "0", icon: "📝", color: "from-pink-400 to-purple-300" },
-                        { label: "Active Members", value: stats.activeMembers || "0", icon: "👥", color: "from-fuchsia-300 to-pink-400" }
+                        { label: "Total Books", value: String(stats.totalBooks ?? 0).padStart(2, '0'), icon: "📚", color: "from-fuchsia-400 to-pink-300" },
+                        { label: "Digital Journals", value: String(stats.digitalJournals ?? 0).padStart(2, '0'), icon: "💻", color: "from-purple-400 to-fuchsia-300" },
+                        { label: "Research Papers", value: String(stats.researchPapers ?? 0).padStart(2, '0'), icon: "📝", color: "from-pink-400 to-purple-300" },
+                        { label: "Active Members", value: String(stats.activeMembers ?? 0).padStart(2, '0'), icon: "👥", color: "from-fuchsia-300 to-pink-400" }
                     ].map((stat, index) => (
                         <div
                             key={index}
