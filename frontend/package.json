@@ -2,6 +2,7 @@
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://shubham108-tech.github.io/LP",
   "type": "module",
   "scripts": {
     "dev": "vite",

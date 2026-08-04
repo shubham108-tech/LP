@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path'); // ✅ ADDED: React dist serve karne ke liye
+const fs = require('fs');
 
 dotenv.config();
 
@@ -21,7 +22,22 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const app = express();
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'https://shubham108-tech.github.io',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow all during development/production transition
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 const { authenticateToken } = require('./middleware/authMiddleware');
