@@ -145,6 +145,49 @@ async function initPgSchema() {
             );
             console.log('✅ Demo accounts seeded in Vercel Postgres Database!');
         }
+
+        // Check & Seed Books in Vercel Postgres
+        const booksRes = await pgPool.query("SELECT COUNT(*) FROM books");
+        if (parseInt(booksRes.rows[0].count, 10) === 0) {
+            const defaultBooks = [
+                ['The Great Gatsby', 'F. Scott Fitzgerald', 'General', 5, 5],
+                ['To Kill a Mockingbird', 'Harper Lee', 'General', 3, 3],
+                ['1984', 'George Orwell', 'General', 8, 8],
+                ['Pride and Prejudice', 'Jane Austen', 'General', 4, 4],
+                ['The Catcher in the Rye', 'J.D. Salinger', 'General', 5, 5],
+                ['The Hobbit', 'J.R.R. Tolkien', 'General', 2, 2],
+                ['Fahrenheit 451', 'Ray Bradbury', 'General', 6, 6],
+                ['Moby Dick', 'Herman Melville', 'General', 3, 3],
+                ['War and Peace', 'Leo Tolstoy', 'General', 2, 2],
+                ['The Odyssey', 'Homer', 'General', 4, 4],
+                ['Hamlet', 'William Shakespeare', 'General', 10, 10]
+            ];
+            for (const b of defaultBooks) {
+                await pgPool.query(
+                    "INSERT INTO books (book_name, author, category, total_quantity, available_quantity) VALUES ($1, $2, $3, $4, $5)",
+                    b
+                );
+            }
+            console.log('✅ Demo books seeded in Vercel Postgres Database!');
+        }
+
+        // Check & Seed Stationary Items
+        const statRes = await pgPool.query("SELECT COUNT(*) FROM stationary_items");
+        if (parseInt(statRes.rows[0].count, 10) === 0) {
+            const defaultStationary = [
+                ['A4 Printing Paper (Rim)', 'Paper', 50, 50, 10, 'rim', 'BILL-101'],
+                ['Whiteboard Marker (Black)', 'Writing', 100, 100, 20, 'pcs', 'BILL-102'],
+                ['Blue Ball Pens (Box)', 'Writing', 30, 30, 5, 'box', 'BILL-103'],
+                ['Stapler Machine No.10', 'Office', 15, 15, 3, 'pcs', 'BILL-104']
+            ];
+            for (const s of defaultStationary) {
+                await pgPool.query(
+                    "INSERT INTO stationary_items (item_name, category, total_stock, available_stock, min_stock_limit, unit, bill_number) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    s
+                );
+            }
+            console.log('✅ Demo stationary items seeded in Vercel Postgres Database!');
+        }
     } catch (e) {
         console.error('Vercel Postgres Init Error:', e.message);
     }
