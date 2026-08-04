@@ -131,8 +131,27 @@ app.use('/api/stationary', require('./routes/stationaryRoutes'));
 
 // ===================================================
 // ✅ ADDED: React Frontend Serve Karne Ka Code
-app.get('/', (req, res) => {
-    res.json({ message: "LibraryPro Backend API is running successfully on Vercel!" });
+app.get('/', async (req, res) => {
+    try {
+        const db = require('./config/db');
+        const [books] = await db.query('SELECT COUNT(*) FROM books');
+        const [users] = await db.query('SELECT COUNT(*) FROM users');
+        const [stat] = await db.query('SELECT COUNT(*) FROM stationary_items');
+        res.json({
+            message: "LibraryPro Backend API is running successfully on Vercel!",
+            database: "PostgreSQL (Neon)",
+            counts: {
+                users: parseInt(users[0]?.count || users[0]?.['count'] || users[0]?.['COUNT(*)'] || 0, 10),
+                books: parseInt(books[0]?.count || books[0]?.['count'] || books[0]?.['COUNT(*)'] || 0, 10),
+                stationary: parseInt(stat[0]?.count || stat[0]?.['count'] || stat[0]?.['COUNT(*)'] || 0, 10)
+            }
+        });
+    } catch (err) {
+        res.json({
+            message: "LibraryPro Backend API is running successfully on Vercel!",
+            database_error: err.message
+        });
+    }
 });
 
 app.get('/api/seed', async (req, res) => {
