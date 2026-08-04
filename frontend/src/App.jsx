@@ -1,7 +1,43 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import { Suspense } from 'react';
+
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('ErrorBoundary caught error:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+                    <div className="p-4 bg-rose-500/20 rounded-full text-rose-400 text-5xl mb-4">🚀</div>
+                    <h2 className="text-2xl font-bold mb-2">New System Update Available!</h2>
+                    <p className="text-slate-400 max-w-md mb-6 text-sm">
+                        LibraryPro has been updated with new improvements. Click below to load the latest version.
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition text-sm"
+                    >
+                        Refresh Page Now
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 // Direct Page Imports (Eliminates Dynamic Import 404 Chunk Errors Completely)
 import Login from './pages/Login';
@@ -59,69 +95,71 @@ const PrivateRoute = ({ children }) => {
 const AdminRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) return <PageLoader />;
-    return user && (user.role === 'admin' || user.role === 'hod') ? children : <Navigate to="/teacher/dashboard" />;
+    return user && (user.role === 'admin' || user.role === 'hod') ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
     return (
-        <BrowserRouter>
+        <ErrorBoundary>
             <AuthProvider>
-                <Toaster position="top-right" />
-                <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/verify-otp" element={<OTPVerification />} />
-                        <Route path="/" element={<Landing />} />
+                <BrowserRouter basename="/LP">
+                    <Toaster position="top-right" />
+                    <Suspense fallback={<PageLoader />}>
+                        <Routes>
+                            {/* Public Routes */}
+                            <Route path="/" element={<Landing />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/register" element={<Register />} />
+                            <Route path="/verify-otp" element={<OTPVerification />} />
 
-                        {/* Admin Routes */}
-                        <Route path="/admin" element={<PrivateRoute><AdminRoute><Layout /></AdminRoute></PrivateRoute>}>
-                            <Route index element={<Navigate to="/admin/dashboard" />} />
-                            <Route path="dashboard" element={<AdminDashboard />} />
-                            <Route path="books" element={<BooksManager />} />
-                            <Route path="requests" element={<RequestsManager />} />
-                            <Route path="issues" element={<IssuesManager />} />
-                            <Route path="teachers" element={<TeachersManager />} />
-                            <Route path="students" element={<StudentsManager />} />
-                            <Route path="stationary" element={<StationaryAdmin />} />
-                            <Route path="performance" element={<TeacherPerformance />} />
-                            <Route path="feedback" element={<FeedbackManager />} />
-                            <Route path="profile" element={<ProfileSettings />} />
-                        </Route>
+                            {/* Shared Protected Routes */}
+                            <Route path="/dashboard" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                                <Route index element={<Navigate to="/admin" replace />} />
+                                <Route path="profile" element={<ProfileSettings />} />
+                                <Route path="feedback" element={<Feedback />} />
+                            </Route>
 
-                        {/* Engineering / Shared Routes */}
-                        <Route path="/engineering" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                            <Route path="projects" element={<ProjectRepository />} />
-                            <Route path="placements" element={<PlacementZone />} />
-                            <Route path="resources" element={<ResourceBooking />} />
-                        </Route>
+                            {/* Admin & HOD Routes */}
+                            <Route path="/admin" element={<AdminRoute><Layout /></AdminRoute>}>
+                                <Route index element={<AdminDashboard />} />
+                                <Route path="books" element={<BooksManager />} />
+                                <Route path="requests" element={<RequestsManager />} />
+                                <Route path="issues" element={<IssuesManager />} />
+                                <Route path="teachers" element={<TeachersManager />} />
+                                <Route path="students" element={<StudentsManager />} />
+                                <Route path="stationary" element={<StationaryAdmin />} />
+                                <Route path="performance" element={<TeacherPerformance />} />
+                                <Route path="feedback" element={<FeedbackManager />} />
+                            </Route>
 
-                        {/* Teacher/Student Routes */}
-                        <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                            <Route index element={<Navigate to="/teacher/dashboard" />} />
-                            <Route path="dashboard" element={<TeacherDashboard />} />
-                            <Route path="history" element={<TeacherHistory />} />
-                            <Route path="notes" element={<NotesManager />} />
-                            <Route path="assignments" element={<AssignmentsManager />} />
-                            <Route path="exams" element={<ExamsManager />} />
-                            <Route path="schedule" element={<ScheduleManager />} />
-                            <Route path="stationary" element={<StationaryTeacher />} />
-                            <Route path="analytics" element={<AnalyticsDashboard />} />
-                            <Route path="notices" element={<TeacherNotices />} />
-                            <Route path="feedback" element={<Feedback />} />
-                            <Route path="performance" element={<TeacherPerformance />} />
-                            <Route path="profile" element={<ProfileSettings />} />
-                        </Route>
+                            {/* Teacher Routes */}
+                            <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                                <Route index element={<TeacherDashboard />} />
+                                <Route path="history" element={<TeacherHistory />} />
+                                <Route path="notes" element={<NotesManager />} />
+                                <Route path="assignments" element={<AssignmentsManager />} />
+                                <Route path="exams" element={<ExamsManager />} />
+                                <Route path="exam-portal" element={<ExamPortal />} />
+                                <Route path="schedules" element={<ScheduleManager />} />
+                                <Route path="analytics" element={<AnalyticsDashboard />} />
+                                <Route path="notices" element={<TeacherNotices />} />
+                                <Route path="stationary" element={<StationaryTeacher />} />
+                            </Route>
 
-                        {/* Exam Portal (Full Screen) */}
-                        <Route path="/teacher/exams/:id" element={<PrivateRoute><ExamPortal /></PrivateRoute>} />
+                            {/* Shared Engineering Routes */}
+                            <Route path="/engineering" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                                <Route path="projects" element={<ProjectRepository />} />
+                                <Route path="placements" element={<PlacementZone />} />
+                                <Route path="booking" element={<ResourceBooking />} />
+                            </Route>
 
-                        {/* Catch all */}
-                        <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                </Suspense>
+                            {/* Fallback */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </Suspense>
+                </BrowserRouter>
             </AuthProvider>
-        </BrowserRouter>
+        </ErrorBoundary>
     );
 }
 
