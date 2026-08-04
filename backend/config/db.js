@@ -209,6 +209,23 @@ async function initPgSchema() {
                 rating INT DEFAULT 5,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS exams (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                subject VARCHAR(255),
+                branch VARCHAR(100),
+                total_marks INT DEFAULT 100,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS exam_results (
+                id SERIAL PRIMARY KEY,
+                exam_id INT,
+                student_id INT NOT NULL,
+                score INT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
 
         // Check & Seed Users in Vercel Postgres
@@ -488,13 +505,18 @@ const dbWrapper = {
 
     async resetData() {
         if (dbMode === 'postgres' && pgPool) {
-            await pgPool.query(`
-                TRUNCATE TABLE 
-                    feedback, notifications, discussions, suggestions, reviews,
-                    stationary_ledger, stationary_requests, stationary_items, 
-                    book_issues, book_requests, notes, projects, books, users 
-                RESTART IDENTITY CASCADE;
-            `);
+            const tables = [
+                'feedback', 'notifications', 'discussions', 'suggestions', 'reviews',
+                'stationary_ledger', 'stationary_requests', 'stationary_items', 
+                'book_issues', 'book_requests', 'notes', 'projects', 'exam_results', 'exams', 'books', 'users'
+            ];
+            for (const t of tables) {
+                try {
+                    await pgPool.query(`TRUNCATE TABLE "${t}" RESTART IDENTITY CASCADE;`);
+                } catch (e) {
+                    console.log(`Table ${t} truncate skipped:`, e.message);
+                }
+            }
             await initPgSchema();
             return true;
         }
