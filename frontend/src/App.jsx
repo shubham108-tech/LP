@@ -1,59 +1,43 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 
-// Auto-reload page when dynamic imports fail due to new deployment asset hash updates
-window.addEventListener('vite:preloadError', (event) => {
-    event.preventDefault();
-    window.location.reload();
-});
-
-const safeLazy = (importFn) => {
-    return lazy(() =>
-        importFn().catch((err) => {
-            console.warn('Chunk load error, refreshing latest build assets...', err);
-            window.location.reload();
-            return new Promise(() => {});
-        })
-    );
-};
-
-// Lazy Load Components
-const Login = safeLazy(() => import('./pages/Login'));
-const Register = safeLazy(() => import('./pages/Register'));
-const OTPVerification = safeLazy(() => import('./pages/OTPVerification'));
-const Landing = safeLazy(() => import('./pages/Landing'));
+// Direct Page Imports (Eliminates Dynamic Import 404 Chunk Errors Completely)
+import Login from './pages/Login';
+import Register from './pages/Register';
+import OTPVerification from './pages/OTPVerification';
+import Landing from './pages/Landing';
 
 // Admin Pages
-const AdminDashboard = safeLazy(() => import('./pages/admin/AdminDashboard'));
-const BooksManager = safeLazy(() => import('./pages/admin/BooksManager'));
-const RequestsManager = safeLazy(() => import('./pages/admin/RequestsManager'));
-const IssuesManager = safeLazy(() => import('./pages/admin/IssuesManager'));
-const TeachersManager = safeLazy(() => import('./pages/admin/TeachersManager'));
-const StudentsManager = safeLazy(() => import('./pages/admin/StudentsManager'));
-const StationaryAdmin = safeLazy(() => import('./pages/admin/StationaryAdmin'));
+import AdminDashboard from './pages/admin/AdminDashboard';
+import BooksManager from './pages/admin/BooksManager';
+import RequestsManager from './pages/admin/RequestsManager';
+import IssuesManager from './pages/admin/IssuesManager';
+import TeachersManager from './pages/admin/TeachersManager';
+import StudentsManager from './pages/admin/StudentsManager';
+import StationaryAdmin from './pages/admin/StationaryAdmin';
 
 // Teacher Pages
-const TeacherDashboard = safeLazy(() => import('./pages/teacher/TeacherDashboard'));
-const TeacherHistory = safeLazy(() => import('./pages/teacher/MyHistory'));
-const NotesManager = safeLazy(() => import('./pages/teacher/NotesManager'));
-const AssignmentsManager = safeLazy(() => import('./pages/teacher/AssignmentsManager'));
-const ExamsManager = safeLazy(() => import('./pages/teacher/ExamsManager'));
-const ExamPortal = safeLazy(() => import('./pages/teacher/ExamPortal'));
-const ScheduleManager = safeLazy(() => import('./pages/teacher/ScheduleManager'));
-const AnalyticsDashboard = safeLazy(() => import('./pages/teacher/AnalyticsDashboard'));
-const TeacherNotices = safeLazy(() => import('./pages/teacher/TeacherNotices'));
-const TeacherPerformance = safeLazy(() => import('./pages/admin/TeacherPerformance'));
-const FeedbackManager = safeLazy(() => import('./pages/admin/FeedbackManager'));
-const ProfileSettings = safeLazy(() => import('./pages/ProfileSettings'));
-const Feedback = safeLazy(() => import('./pages/Feedback'));
-const StationaryTeacher = safeLazy(() => import('./pages/teacher/StationaryTeacher'));
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherHistory from './pages/teacher/MyHistory';
+import NotesManager from './pages/teacher/NotesManager';
+import AssignmentsManager from './pages/teacher/AssignmentsManager';
+import ExamsManager from './pages/teacher/ExamsManager';
+import ExamPortal from './pages/teacher/ExamPortal';
+import ScheduleManager from './pages/teacher/ScheduleManager';
+import AnalyticsDashboard from './pages/teacher/AnalyticsDashboard';
+import TeacherNotices from './pages/teacher/TeacherNotices';
+import TeacherPerformance from './pages/admin/TeacherPerformance';
+import FeedbackManager from './pages/admin/FeedbackManager';
+import ProfileSettings from './pages/ProfileSettings';
+import Feedback from './pages/Feedback';
+import StationaryTeacher from './pages/teacher/StationaryTeacher';
 
 // Engineering / Shared Pages
-const ProjectRepository = safeLazy(() => import('./pages/engineering/ProjectRepository'));
-const PlacementZone = safeLazy(() => import('./pages/engineering/PlacementZone'));
-const ResourceBooking = safeLazy(() => import('./pages/engineering/ResourceBooking'));
+import ProjectRepository from './pages/engineering/ProjectRepository';
+import PlacementZone from './pages/engineering/PlacementZone';
+import ResourceBooking from './pages/engineering/ResourceBooking';
 
 // Components
 import Layout from './components/Layout';
