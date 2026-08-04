@@ -516,3 +516,50 @@ exports.deleteUser = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
+exports.createUser = async (req, res) => {
+    try {
+        const { name, email, password, role, branch, year, division } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Name, email, and password are required' });
+        }
+
+        const userRole = role || 'teacher';
+        const cleanEmail = email.trim().toLowerCase();
+
+        // Check existing user
+        const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
+        if (existing.length > 0) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        let profileImage = null;
+
+        if (req.file) {
+            const uploadDir = path.join(__dirname, '../uploads/profiles');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+            const filename = `${Date.now()}-${cleanName}`;
+            const filepath = path.join(uploadDir, filename);
+            fs.writeFileSync(filepath, req.file.buffer);
+            profileImage = `/uploads/profiles/${filename}`;
+        }
+
+        const [result] = await db.query(
+            'INSERT INTO users (name, email, password, role, branch, year, division, profile_image, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)',
+            [name, cleanEmail, hashedPassword, userRole, branch || null, year || null, division || null, profileImage]
+        );
+
+        res.status(201).json({
+            message: `${userRole.toUpperCase()} created successfully`,
+            userId: result.insertId
+        });
+    } catch (error) {
+        console.error('Create User Error:', error);
+        res.status(500).json({ message: 'Failed to create user', error: error.message });
+    }
+};
