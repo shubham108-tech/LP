@@ -97,48 +97,14 @@ const AdminDashboard = () => {
         <div>
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setShowResetModal(true)}
-                        className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-4 py-2 rounded-lg transition-all shadow-sm font-medium hover:shadow"
-                        title="Reset Database to initial default state"
-                    >
-                        <RiRefreshLine className="text-xl" />
-                        <span>Reset All Data</span>
-                    </button>
-                    <button
-                        onClick={handleDownloadReport}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-medium"
-                    >
-                        <RiFileDownloadLine className="text-xl" />
-                        <span>Download Report</span>
-                    </button>
-                </div>
+                <button
+                    onClick={handleDownloadReport}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-medium"
+                >
+                    <RiFileDownloadLine className="text-xl" />
+                    <span>Download Report</span>
+                </button>
             </div>
-
-            {showResetModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Reset All Data?</h3>
-                        <p className="text-slate-600 mb-6">This will permanently delete all books, users, and borrowing records. This action cannot be undone.</p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowResetModal(false)}
-                                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleResetDatabase}
-                                disabled={isResetting}
-                                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium transition disabled:opacity-50"
-                            >
-                                {isResetting ? 'Resetting...' : 'Confirm Reset'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Leaderboard */}
             <Leaderboard />
