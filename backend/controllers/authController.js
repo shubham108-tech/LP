@@ -269,28 +269,25 @@ exports.resendOTP = async (req, res) => {
 
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
 
     try {
-        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        const [users] = await db.query('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [cleanEmail]);
         if (users.length === 0) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
 
         const user = users[0];
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(password.trim(), user.password);
 
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
 
-        // Removed email verification check as per user request
-        // if (!user.is_verified) {
-        //    return res.status(403).json({ message: 'Email not verified', email: user.email, requireOtp: true });
-        // }
-
+        const secret = process.env.JWT_SECRET || 'development_secret_key_123';
         const token = jwt.sign(
             { id: user.id, role: user.role, name: user.name, branch: user.branch, year: user.year, division: user.division },
-            process.env.JWT_SECRET,
+            secret,
             { expiresIn: '1d' }
         );
 
@@ -308,8 +305,8 @@ exports.login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error during login', error: error.message });
     }
 };
 
