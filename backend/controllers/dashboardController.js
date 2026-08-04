@@ -144,6 +144,7 @@ exports.getDashboardData = async (req, res) => {
 
 exports.getStats = async (req, res) => {
     try {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         // Physical Books
         const [books] = await db.query('SELECT COALESCE(SUM(total_quantity), 0) as count FROM books');
         // Digital Journals / Notes

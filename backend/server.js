@@ -21,6 +21,15 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('etag');
+
+// Disable browser caching for dynamic API responses to prevent 304 Not Modified
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+});
 
 // Middleware
 const allowedOrigins = [
