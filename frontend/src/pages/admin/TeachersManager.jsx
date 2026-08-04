@@ -38,7 +38,8 @@ const TeachersManager = () => {
     const fetchTeachers = async () => {
         try {
             const res = await api.get(`/auth/users?role=${viewRole}`);
-            setTeachers(res.data);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setTeachers(data);
 
             // Calc stats
             const now = new Date();
@@ -46,14 +47,15 @@ const TeachersManager = () => {
             const thisYear = now.getFullYear();
 
             setStats({
-                total: res.data.length,
-                active: res.data.length, // Assuming active
-                newThisMonth: res.data.filter(t => {
+                total: data.length,
+                active: data.length,
+                newThisMonth: data.filter(t => {
                     const d = new Date(t.created_at);
                     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
                 }).length
             });
         } catch (error) {
+            setTeachers([]);
             toast.error('Failed to fetch teachers');
         }
     };

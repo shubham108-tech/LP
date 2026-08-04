@@ -47,22 +47,22 @@ const BooksManager = () => {
 
     // Also update stats when books change
     useEffect(() => {
-        if (books.length > 0) {
-            setStats({
-                total: books.reduce((acc, b) => acc + (parseInt(b.total_quantity) || 0), 0),
-                available: books.reduce((acc, b) => acc + (parseInt(b.available_quantity) || 0), 0),
-                ebooks: books.filter(b => b.pdf_url).length, // New Stat
-                distinctCategories: new Set(books.map(b => b.category)).size
-            });
-        }
+        const safeBooks = Array.isArray(books) ? books : [];
+        setStats({
+            total: safeBooks.reduce((acc, b) => acc + (parseInt(b.total_quantity) || 0), 0),
+            available: safeBooks.reduce((acc, b) => acc + (parseInt(b.available_quantity) || 0), 0),
+            ebooks: safeBooks.filter(b => b.pdf_url).length,
+            distinctCategories: new Set(safeBooks.map(b => b.category)).size
+        });
     }, [books]);
 
     const fetchBooks = async () => {
         try {
             const res = await api.get('/books');
-            setBooks(res.data);
+            setBooks(Array.isArray(res.data) ? res.data : []);
             setSelectedBooks([]);
         } catch (error) {
+            setBooks([]);
             toast.error('Failed to fetch books');
         }
     };

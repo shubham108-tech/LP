@@ -40,7 +40,7 @@ exports.sendGroupNotification = async (req, res) => {
 
         if (!message) return res.status(400).json({ message: 'Message is required' });
 
-        let query = 'SELECT id FROM users WHERE role = "student"';
+        let query = "SELECT id FROM users WHERE role = 'student'";
         let params = [];
 
         // If sender is a teacher/HOD, enforce their branch (unless they are admin)

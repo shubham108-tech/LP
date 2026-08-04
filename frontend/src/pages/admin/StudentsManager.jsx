@@ -35,7 +35,8 @@ const StudentsManager = () => {
     const fetchStudents = async () => {
         try {
             const res = await api.get('/auth/users?role=student');
-            setStudents(res.data);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setStudents(data);
 
             // Calc stats
             const now = new Date();
@@ -43,14 +44,15 @@ const StudentsManager = () => {
             const thisYear = now.getFullYear();
 
             setStats({
-                total: res.data.length,
-                active: res.data.length, // Assuming all fetched are active for now
-                newThisMonth: res.data.filter(s => {
+                total: data.length,
+                active: data.length,
+                newThisMonth: data.filter(s => {
                     const d = new Date(s.created_at);
                     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
                 }).length
             });
         } catch (error) {
+            setStudents([]);
             toast.error('Failed to fetch students');
         }
     };
