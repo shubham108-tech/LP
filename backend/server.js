@@ -107,23 +107,23 @@ app.use('/api/stationary', require('./routes/stationaryRoutes'));
 
 // ===================================================
 // ✅ ADDED: React Frontend Serve Karne Ka Code
-// ===================================================
-
-// React build folder (dist/client) ko static serve karega
-const frontendDistPath = fs.existsSync(path.join(__dirname, '../frontend/dist'))
-    ? path.join(__dirname, '../frontend/dist')
-    : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : path.join(__dirname, 'client'));
-
-app.use(express.static(frontendDistPath));
-
-// React Router support (important)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+app.get('/', (req, res) => {
+    res.json({ message: "LibraryPro Backend API is running successfully on Vercel!" });
 });
 
-// ===================================================
-// END OF ADDED CODE
-// ===================================================
+// Serve frontend only in local environment if dist exists
+const indexHtmlPath = path.join(__dirname, '../frontend/dist/index.html');
+if (fs.existsSync(indexHtmlPath) && !process.env.VERCEL) {
+    const frontendDistPath = path.join(__dirname, '../frontend/dist');
+    app.use(express.static(frontendDistPath));
+    app.get('*', (req, res) => {
+        res.sendFile(indexHtmlPath);
+    });
+} else {
+    app.get('*', (req, res) => {
+        res.status(404).json({ error: "API route not found" });
+    });
+}
 
 
 // Error Handling Middleware
