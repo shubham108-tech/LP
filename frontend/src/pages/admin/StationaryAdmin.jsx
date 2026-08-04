@@ -5,7 +5,7 @@ import {
     RiAddLine, RiCheckLine, RiCloseLine, RiArchiveLine, RiRefreshLine, 
     RiDownloadLine, RiFileExcel2Line, RiBarChartBoxLine, RiSearchLine,
     RiStore2Line, RiBookLine, RiPrinterLine, RiLockLine, RiLockUnlockLine,
-    RiArrowUpDownLine, RiPieChartLine, RiUserSmileLine
+    RiArrowUpDownLine, RiPieChartLine, RiUserSmileLine, RiPencilLine, RiDeleteBinLine
 } from 'react-icons/ri';
 import { 
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, 
@@ -27,6 +27,7 @@ const StationaryAdmin = () => {
 
     // Form states
     const [editingItem, setEditingItem] = useState(null);
+    const [editingLedger, setEditingLedger] = useState(null);
     const [addingStockItem, setAddingStockItem] = useState(null);
     const [addStockAmount, setAddStockAmount] = useState('');
     const [addStockBill, setAddStockBill] = useState('');
@@ -144,6 +145,36 @@ const StationaryAdmin = () => {
             fetchData();
         } catch (error) {
             toast.error('Error adding stock');
+        }
+    };
+
+    const handleEditLedgerSubmit = async (e) => {
+        e.preventDefault();
+        if (!editingLedger) return;
+        try {
+            await api.put(`/stationary/ledger/${editingLedger.id}`, {
+                reference_no: editingLedger.reference_no,
+                notes: editingLedger.notes,
+                transaction_type: editingLedger.transaction_type,
+                received_qty: Number(editingLedger.received_qty) || 0,
+                issued_qty: Number(editingLedger.issued_qty) || 0
+            });
+            toast.success('Ledger entry updated successfully');
+            setEditingLedger(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error updating ledger entry');
+        }
+    };
+
+    const handleDeleteLedger = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this ledger log entry?')) return;
+        try {
+            await api.delete(`/stationary/ledger/${id}`);
+            toast.success('Ledger entry deleted successfully');
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error deleting ledger entry');
         }
     };
 
@@ -646,7 +677,8 @@ const StationaryAdmin = () => {
                                     <th className="p-3 text-right">Received Qty (+)</th>
                                     <th className="p-3 text-right">Issued Qty (-)</th>
                                     <th className="p-3 text-right font-black">Balance Stock</th>
-                                    <th className="p-3 rounded-tr-xl">Ref / Bill No / User</th>
+                                    <th className="p-3">Ref / Bill No / User</th>
+                                    <th className="p-3 rounded-tr-xl text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
@@ -686,11 +718,29 @@ const StationaryAdmin = () => {
                                             <div className="font-semibold text-slate-700">{row.reference_no}</div>
                                             <div className="text-slate-400">{row.user_name}</div>
                                         </td>
+                                        <td className="p-3 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button
+                                                    onClick={() => setEditingLedger(row)}
+                                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                    title="Edit Ledger Entry"
+                                                >
+                                                    <RiPencilLine size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteLedger(row.id)}
+                                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                    title="Delete Ledger Entry"
+                                                >
+                                                    <RiDeleteBinLine size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                                 {filteredLedger.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" className="p-8 text-center text-slate-400">
+                                        <td colSpan="9" className="p-8 text-center text-slate-400">
                                             No stock movement entries recorded yet.
                                         </td>
                                     </tr>
@@ -761,6 +811,52 @@ const StationaryAdmin = () => {
                             <div className="flex justify-end gap-2 mt-6">
                                 <button type="button" onClick={() => setAddingStockItem(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>
                                 <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm font-bold shadow-md shadow-emerald-600/20">Confirm & Record Ledger</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {editingLedger && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+                        <h3 className="text-lg font-bold mb-4 text-slate-800">Edit Stock Movement Log Entry</h3>
+                        <form onSubmit={handleEditLedgerSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Item Name</label>
+                                <input type="text" disabled className="w-full border rounded-xl p-2.5 text-sm bg-slate-100 font-semibold text-slate-700" value={editingLedger.item_name} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Transaction Type</label>
+                                    <select className="w-full border rounded-xl p-2.5 text-sm bg-slate-50 font-medium" value={editingLedger.transaction_type} onChange={e => setEditingLedger({ ...editingLedger, transaction_type: e.target.value })}>
+                                        <option value="RECEIVED">RECEIVED</option>
+                                        <option value="ISSUED">ISSUED</option>
+                                        <option value="RETURNED">RETURNED</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Ref / Bill Number</label>
+                                    <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingLedger.reference_no} onChange={e => setEditingLedger({ ...editingLedger, reference_no: e.target.value })} required />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Received Qty (+)</label>
+                                    <input type="number" min="0" className="w-full border rounded-xl p-2.5 text-sm text-emerald-700 font-bold" value={editingLedger.received_qty} onChange={e => setEditingLedger({ ...editingLedger, received_qty: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Issued Qty (-)</label>
+                                    <input type="number" min="0" className="w-full border rounded-xl p-2.5 text-sm text-rose-700 font-bold" value={editingLedger.issued_qty} onChange={e => setEditingLedger({ ...editingLedger, issued_qty: e.target.value })} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Notes / Description</label>
+                                <textarea rows="2" className="w-full border rounded-xl p-2.5 text-sm" value={editingLedger.notes || ''} onChange={e => setEditingLedger({ ...editingLedger, notes: e.target.value })} placeholder="Add notes or reason..."></textarea>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-6">
+                                <button type="button" onClick={() => setEditingLedger(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-md shadow-indigo-600/20">Save Ledger Changes</button>
                             </div>
                         </form>
                     </div>

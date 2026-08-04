@@ -365,6 +365,49 @@ exports.getLedger = async (req, res) => {
     }
 };
 
+// Update ledger log entry (Admin)
+exports.updateLedger = async (req, res) => {
+    const { id } = req.params;
+    const { reference_no, notes, transaction_type, received_qty, issued_qty } = req.body;
+
+    try {
+        const [existing] = await db.query('SELECT * FROM stationary_ledger WHERE id = ?', [id]);
+        if (existing.length === 0) return res.status(404).json({ message: 'Ledger entry not found' });
+
+        await db.query(
+            `UPDATE stationary_ledger 
+             SET reference_no = COALESCE(?, reference_no),
+                 notes = COALESCE(?, notes),
+                 transaction_type = COALESCE(?, transaction_type),
+                 received_qty = COALESCE(?, received_qty),
+                 issued_qty = COALESCE(?, issued_qty)
+             WHERE id = ?`,
+            [reference_no, notes, transaction_type, received_qty, issued_qty, id]
+        );
+
+        res.json({ message: 'Ledger log entry updated successfully' });
+    } catch (error) {
+        console.error('UPDATE LEDGER ERROR:', error);
+        res.status(500).json({ message: 'Error updating ledger entry', error: error.message });
+    }
+};
+
+// Delete ledger log entry (Admin)
+exports.deleteLedger = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [existing] = await db.query('SELECT * FROM stationary_ledger WHERE id = ?', [id]);
+        if (existing.length === 0) return res.status(404).json({ message: 'Ledger entry not found' });
+
+        await db.query('DELETE FROM stationary_ledger WHERE id = ?', [id]);
+        res.json({ message: 'Ledger log entry deleted successfully' });
+    } catch (error) {
+        console.error('DELETE LEDGER ERROR:', error);
+        res.status(500).json({ message: 'Error deleting ledger entry', error: error.message });
+    }
+};
+
 // --- REPORTS & ANALYTICS (Admin / HOD) ---
 
 // Get summary reports, user statistics, top consumed items graph data

@@ -18,6 +18,8 @@ router.put('/requests/:id', authenticateToken, isAdmin, stationaryController.upd
 
 // Stock Movement Register / Ledger (Admin & HOD)
 router.get('/ledger', authenticateToken, isAdmin, stationaryController.getLedger);
+router.put('/ledger/:id', authenticateToken, isAdmin, stationaryController.updateLedger);
+router.delete('/ledger/:id', authenticateToken, isAdmin, stationaryController.deleteLedger);
 
 // Reports & Analytics management (Admin & HOD)
 router.get('/reports', authenticateToken, isAdmin, stationaryController.getAdminReports);
