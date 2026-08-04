@@ -228,88 +228,15 @@ async function initPgSchema() {
             );
         `);
 
-        // Check & Seed Users in Vercel Postgres
+        // Ensure System Admin user exists in Postgres
         const adminRes = await pgPool.query("SELECT id FROM users WHERE email = 'admin@library.com'");
         if (adminRes.rows.length === 0) {
             const hashAdmin = bcrypt.hashSync('admin123', 10);
-            const hashPass = bcrypt.hashSync('password123', 10);
-
-            // Admins & HODs
-            await pgPool.query("INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)", ['System Admin', 'admin@library.com', hashAdmin, 'admin']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, is_verified) VALUES ($1, $2, $3, $4, $5, true)", ['HOD Engineering', 'sagar@library.com', hashPass, 'hod', 'Computer Science']);
-
-            // Teachers
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, is_verified) VALUES ($1, $2, $3, $4, $5, true)", ['Prof. Powar', 'powar@library.com', hashPass, 'teacher', 'Computer Science']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, is_verified) VALUES ($1, $2, $3, $4, $5, true)", ['Dr. Sarah Wilson', 'sarah@school.com', hashPass, 'teacher', 'Electronics']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, is_verified) VALUES ($1, $2, $3, $4, $5, true)", ['Prof. Mike Johnson', 'mike@school.com', hashPass, 'teacher', 'Mechanical']);
-
-            // Students
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, year, division, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, true)", ['Shubham Bhendavade', 'shubham@library.com', hashPass, 'student', 'Computer Science', '4th Year', 'A']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, year, division, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, true)", ['Rahul Sharma', 'rahul@student.com', hashPass, 'student', 'Computer Science', '3rd Year', 'B']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, year, division, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, true)", ['Priya Patel', 'priya@student.com', hashPass, 'student', 'Electronics', '2nd Year', 'A']);
-            await pgPool.query("INSERT INTO users (name, email, password, role, branch, year, division, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, true)", ['Amit Kumar', 'amit@student.com', hashPass, 'student', 'Mechanical', '4th Year', 'C']);
-
-            console.log('✅ Demo users (Admins, Teachers, Students) seeded in Vercel Postgres Database!');
-        }
-
-        // Check & Seed Books in Vercel Postgres
-        const booksRes = await pgPool.query("SELECT COUNT(*) FROM books");
-        if (parseInt(booksRes.rows[0].count, 10) === 0) {
-            const defaultBooks = [
-                ['Clean Code: A Handbook of Agile Software Craftsmanship', 'Robert C. Martin', 'Computer Science', 8, 7],
-                ['Database System Concepts (7th Edition)', 'Silberschatz & Korth', 'Computer Science', 10, 8],
-                ['The Great Gatsby', 'F. Scott Fitzgerald', 'Literature', 5, 5],
-                ['To Kill a Mockingbird', 'Harper Lee', 'Literature', 4, 3],
-                ['1984', 'George Orwell', 'Sci-Fi', 8, 7],
-                ['Pride and Prejudice', 'Jane Austen', 'Romance', 4, 4],
-                ['The Catcher in the Rye', 'J.D. Salinger', 'Fiction', 5, 5],
-                ['The Hobbit', 'J.R.R. Tolkien', 'Fantasy', 6, 6],
-                ['Fahrenheit 451', 'Ray Bradbury', 'Sci-Fi', 6, 6],
-                ['Moby Dick', 'Herman Melville', 'Adventure', 3, 3],
-                ['War and Peace', 'Leo Tolstoy', 'History', 3, 3],
-                ['The Odyssey', 'Homer', 'Classics', 5, 5],
-                ['Hamlet', 'William Shakespeare', 'Drama', 10, 10]
-            ];
-            for (const b of defaultBooks) {
-                await pgPool.query(
-                    "INSERT INTO books (book_name, author, category, total_quantity, available_quantity) VALUES ($1, $2, $3, $4, $5)",
-                    b
-                );
-            }
-            console.log('✅ Demo books seeded in Vercel Postgres Database!');
-        }
-
-        // Check & Seed Stationary Items
-        const statRes = await pgPool.query("SELECT COUNT(*) FROM stationary_items");
-        if (parseInt(statRes.rows[0].count, 10) === 0) {
-            const defaultStationary = [
-                ['A4 Printing Paper (Rim)', 'Paper', 50, 48, 10, 'rim', 'BILL-101'],
-                ['Whiteboard Marker (Black)', 'Writing', 100, 95, 20, 'pcs', 'BILL-102'],
-                ['Blue Ballpoint Pens (Box of 10)', 'Writing', 30, 28, 5, 'box', 'BILL-103'],
-                ['Stapler Machine No.10', 'Office', 15, 14, 3, 'pcs', 'BILL-104'],
-                ['Sticky Notes 3x3 (Yellow)', 'Paper', 40, 40, 5, 'pcs', 'BILL-105']
-            ];
-            for (const s of defaultStationary) {
-                await pgPool.query(
-                    "INSERT INTO stationary_items (item_name, category, total_stock, available_stock, min_stock_limit, unit, bill_number) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                    s
-                );
-            }
-            console.log('✅ Demo stationary items seeded in Vercel Postgres Database!');
-        }
-
-        // Check & Seed Sample Book Issues & Stationary Requests
-        const issueRes = await pgPool.query("SELECT COUNT(*) FROM book_issues");
-        if (parseInt(issueRes.rows[0].count, 10) === 0) {
-            await pgPool.query("INSERT INTO book_issues (user_id, book_id, status, returned) VALUES (4, 1, 'issued', 0)");
-            await pgPool.query("INSERT INTO book_issues (user_id, book_id, status, returned) VALUES (5, 2, 'issued', 0)");
-            await pgPool.query("INSERT INTO book_issues (user_id, book_id, status, returned) VALUES (6, 5, 'returned', 1)");
-        }
-
-        const reqRes = await pgPool.query("SELECT COUNT(*) FROM stationary_requests");
-        if (parseInt(reqRes.rows[0].count, 10) === 0) {
-            await pgPool.query("INSERT INTO stationary_requests (user_id, item_id, quantity, reason, status) VALUES (3, 1, 2, 'For Mid-term Exam Question Papers printing', 'Pending')");
-            await pgPool.query("INSERT INTO stationary_requests (user_id, item_id, quantity, reason, status) VALUES (4, 2, 5, 'For classroom lectures', 'Approved')");
+            await pgPool.query(
+                "INSERT INTO users (name, email, password, role, is_verified) VALUES ($1, $2, $3, $4, true)",
+                ['System Admin', 'admin@library.com', hashAdmin, 'admin']
+            );
+            console.log('✅ System Admin account created in Postgres Database!');
         }
     } catch (e) {
         console.error('Vercel Postgres Init Error:', e.message);
