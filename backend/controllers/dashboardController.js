@@ -164,3 +164,13 @@ exports.getStats = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
+exports.resetSystemData = async (req, res) => {
+    try {
+        await db.resetData();
+        res.json({ message: 'System database reset successfully to initial state!' });
+    } catch (error) {
+        console.error('Reset error:', error);
+        res.status(500).json({ message: 'Failed to reset database', error: error.message });
+    }
+};

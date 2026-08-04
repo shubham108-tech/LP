@@ -429,6 +429,30 @@ const dbWrapper = {
         }
 
         return [[], []];
+    },
+
+    async resetData() {
+        if (dbMode === 'postgres' && pgPool) {
+            await pgPool.query(`
+                TRUNCATE TABLE stationary_ledger, stationary_requests, stationary_items, book_issues, book_requests, notes, projects, books, users RESTART IDENTITY CASCADE;
+            `);
+            await initPgSchema();
+            return true;
+        }
+
+        if (dbMode === 'mysql' && mysqlPool) {
+            await mysqlPool.promise().query("SET FOREIGN_KEY_CHECKS = 0;");
+            const tables = ['users', 'books', 'stationary_items', 'stationary_requests', 'stationary_ledger', 'book_issues', 'book_requests', 'notes', 'projects'];
+            for (const t of tables) {
+                try { await mysqlPool.promise().query(`TRUNCATE TABLE ${t};`); } catch (e) {}
+            }
+            await mysqlPool.promise().query("SET FOREIGN_KEY_CHECKS = 1;");
+            return true;
+        }
+
+        dbData = null;
+        initPureJsFallback();
+        return true;
     }
 };
 
