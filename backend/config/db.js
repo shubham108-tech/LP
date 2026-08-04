@@ -164,6 +164,51 @@ async function initPgSchema() {
                 file_url VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS reviews (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
+                rating INT NOT NULL DEFAULT 5,
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS suggestions (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                category VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS discussions (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                content TEXT,
+                category VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                message TEXT,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                user_id INT,
+                subject VARCHAR(255),
+                message TEXT,
+                rating INT DEFAULT 5,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
 
         // Check & Seed Admin in Vercel Postgres
@@ -265,21 +310,23 @@ function initPureJsFallback() {
             books: [
                 { id: 1, book_name: 'The Great Gatsby', author: 'F. Scott Fitzgerald', category: 'General', total_quantity: 5, available_quantity: 5, created_at: new Date().toISOString() },
                 { id: 2, book_name: 'To Kill a Mockingbird', author: 'Harper Lee', category: 'General', total_quantity: 3, available_quantity: 3, created_at: new Date().toISOString() },
-                { id: 3, book_name: '1984', author: 'George Orwell', category: 'General', total_quantity: 8, available_quantity: 8, created_at: new Date().toISOString() },
-                { id: 4, book_name: 'The Hobbit', author: 'J.R.R. Tolkien', category: 'General', total_quantity: 4, available_quantity: 4, created_at: new Date().toISOString() },
-                { id: 5, book_name: 'Project Hail Mary', author: 'Andy Weir', category: 'General', total_quantity: 6, available_quantity: 6, created_at: new Date().toISOString() }
+                { id: 3, book_name: '1984', author: 'George Orwell', category: 'General', total_quantity: 8, available_quantity: 8, created_at: new Date().toISOString() }
             ],
             stationary_items: [
-                { id: 1, item_name: 'Blue Ballpoint Pens (Box of 10)', category: 'Consumable', total_stock: 100, available_stock: 100, min_stock_limit: 20, unit: 'boxes', bill_number: 'BILL-2026-001', created_at: new Date().toISOString() },
-                { id: 2, item_name: 'Black Gel Pens (Box of 10)', category: 'Consumable', total_stock: 80, available_stock: 80, min_stock_limit: 15, unit: 'boxes', bill_number: 'BILL-2026-001', created_at: new Date().toISOString() },
-                { id: 3, item_name: 'A4 Paper Rim (500 Sheets)', category: 'Consumable', total_stock: 50, available_stock: 50, min_stock_limit: 10, unit: 'rims', bill_number: 'BILL-2026-002', created_at: new Date().toISOString() },
-                { id: 4, item_name: 'Whiteboard Markers (Set of 4)', category: 'Consumable', total_stock: 60, available_stock: 60, min_stock_limit: 10, unit: 'sets', bill_number: 'BILL-2026-003', created_at: new Date().toISOString() },
-                { id: 5, item_name: 'Attendance Register Notebook', category: 'Consumable', total_stock: 40, available_stock: 40, min_stock_limit: 5, unit: 'pcs', bill_number: 'BILL-2026-004', created_at: new Date().toISOString() }
+                { id: 1, item_name: 'A4 Printing Paper (Rim)', category: 'Paper', total_stock: 50, available_stock: 50, min_stock_limit: 10, unit: 'rim', bill_number: 'BILL-101' },
+                { id: 2, item_name: 'Whiteboard Marker (Black)', category: 'Writing', total_stock: 100, available_stock: 100, min_stock_limit: 20, unit: 'pcs', bill_number: 'BILL-102' }
             ],
             stationary_requests: [],
             stationary_ledger: [],
+            book_issues: [],
             book_requests: [],
-            book_issues: []
+            notes: [],
+            projects: [],
+            reviews: [],
+            suggestions: [],
+            discussions: [],
+            notifications: [],
+            feedback: []
         };
         savePureJsData();
     }
@@ -355,6 +402,8 @@ const dbWrapper = {
             else if (sqlUpper.includes('FROM STATIONARY_LEDGER')) table = 'stationary_ledger';
             else if (sqlUpper.includes('FROM BOOK_REQUESTS')) table = 'book_requests';
             else if (sqlUpper.includes('FROM BOOK_ISSUES')) table = 'book_issues';
+            else if (sqlUpper.includes('FROM NOTES')) table = 'notes';
+            else if (sqlUpper.includes('FROM PROJECTS')) table = 'projects';
 
             let items = dbData[table] || [];
 
@@ -383,6 +432,8 @@ const dbWrapper = {
             else if (sqlUpper.includes('INTO STATIONARY_LEDGER')) table = 'stationary_ledger';
             else if (sqlUpper.includes('INTO BOOK_REQUESTS')) table = 'book_requests';
             else if (sqlUpper.includes('INTO BOOK_ISSUES')) table = 'book_issues';
+            else if (sqlUpper.includes('INTO NOTES')) table = 'notes';
+            else if (sqlUpper.includes('INTO PROJECTS')) table = 'projects';
 
             if (!dbData[table]) dbData[table] = [];
 
@@ -396,23 +447,11 @@ const dbWrapper = {
                 newItem.role = params[3] || 'student';
                 newItem.branch = params[4] || null;
                 newItem.year = params[5] || null;
-                newItem.division = params[6] || null;
-                newItem.is_verified = params[7] !== undefined ? params[7] : 1;
-                newItem.profile_image = params[8] || null;
-            } else if (table === 'stationary_items') {
-                newItem.item_name = params[0] || 'Item';
-                newItem.category = params[1] || 'Consumable';
-                newItem.total_stock = params[2] || 0;
-                newItem.available_stock = params[3] || 0;
-                newItem.min_stock_limit = params[4] || 5;
-                newItem.unit = params[5] || 'pcs';
-                newItem.bill_number = params[6] || null;
             } else if (table === 'books') {
                 newItem.book_name = params[0] || 'Book';
                 newItem.author = params[1] || 'Author';
                 newItem.category = params[2] || 'General';
                 newItem.total_quantity = params[3] || 1;
-                newItem.available_quantity = params[4] || 1;
             } else {
                 newItem.params = params;
             }
@@ -434,7 +473,11 @@ const dbWrapper = {
     async resetData() {
         if (dbMode === 'postgres' && pgPool) {
             await pgPool.query(`
-                TRUNCATE TABLE stationary_ledger, stationary_requests, stationary_items, book_issues, book_requests, notes, projects, books, users RESTART IDENTITY CASCADE;
+                TRUNCATE TABLE 
+                    feedback, notifications, discussions, suggestions, reviews,
+                    stationary_ledger, stationary_requests, stationary_items, 
+                    book_issues, book_requests, notes, projects, books, users 
+                RESTART IDENTITY CASCADE;
             `);
             await initPgSchema();
             return true;
@@ -442,7 +485,11 @@ const dbWrapper = {
 
         if (dbMode === 'mysql' && mysqlPool) {
             await mysqlPool.promise().query("SET FOREIGN_KEY_CHECKS = 0;");
-            const tables = ['users', 'books', 'stationary_items', 'stationary_requests', 'stationary_ledger', 'book_issues', 'book_requests', 'notes', 'projects'];
+            const tables = [
+                'users', 'books', 'stationary_items', 'stationary_requests', 'stationary_ledger',
+                'book_issues', 'book_requests', 'notes', 'projects', 'reviews', 'suggestions',
+                'discussions', 'notifications', 'feedback'
+            ];
             for (const t of tables) {
                 try { await mysqlPool.promise().query(`TRUNCATE TABLE ${t};`); } catch (e) {}
             }
