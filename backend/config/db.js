@@ -16,6 +16,8 @@ let dbFilePath = null;
 const pgUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 const isPg = Boolean(pgUrl || process.env.POSTGRES_HOST);
 
+let initPgPromise = null;
+
 if (isPg) {
     dbMode = 'postgres';
     console.log('⚡ Vercel Postgres Database environment detected!');
@@ -23,7 +25,7 @@ if (isPg) {
         connectionString: pgUrl,
         ssl: { rejectUnauthorized: false }
     });
-    initPgSchema();
+    initPgPromise = initPgSchema();
 } else {
     mysqlPool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
@@ -252,6 +254,9 @@ function savePureJsData() {
 const dbWrapper = {
     async query(sql, params = []) {
         if (dbMode === 'postgres' && pgPool) {
+            if (initPgPromise) {
+                await initPgPromise;
+            }
             try {
                 let countParamIndex = 1;
                 let pgSql = sql.replace(/\?/g, () => `$${countParamIndex++}`);

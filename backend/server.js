@@ -115,6 +115,25 @@ app.get('/', (req, res) => {
     res.json({ message: "LibraryPro Backend API is running successfully on Vercel!" });
 });
 
+app.get('/api/seed', async (req, res) => {
+    try {
+        const db = require('./config/db');
+        const [books] = await db.query('SELECT COUNT(*) FROM books');
+        const [users] = await db.query('SELECT COUNT(*) FROM users');
+        const [stat] = await db.query('SELECT COUNT(*) FROM stationary_items');
+        res.json({
+            message: "Database check & seed completed!",
+            counts: {
+                users: users[0]?.count || users[0]?.['COUNT(*)'] || users.length,
+                books: books[0]?.count || books[0]?.['COUNT(*)'] || books.length,
+                stationary: stat[0]?.count || stat[0]?.['COUNT(*)'] || stat.length
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Serve frontend only in local environment if dist exists
 const indexHtmlPath = path.join(__dirname, '../frontend/dist/index.html');
 if (fs.existsSync(indexHtmlPath) && !process.env.VERCEL) {
