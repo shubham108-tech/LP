@@ -61,6 +61,20 @@ app.get(['/seed', '/api/seed'], async (req, res) => {
     }
 });
 
+app.get(['/reset', '/api/reset', '/api/clean-reset'], async (req, res) => {
+    try {
+        const db = require('./config/db');
+        await db.resetData();
+        res.json({
+            status: "success",
+            message: "Database 100% reset completed! All books, students, teachers wiped clean.",
+            counts: { users: 1, books: 0, stationary: 0 }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const { authenticateToken } = require('./middleware/authMiddleware');
 
 app.use('/uploads', (req, res, next) => {
