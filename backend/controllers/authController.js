@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'development_secret_key_123';
+
 // Generate 6-digit Secure OTP
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
@@ -89,7 +91,7 @@ exports.register = async (req, res) => {
         // Valid for 10 minutes
         const registrationToken = jwt.sign(
             { name, email, password: hashedPassword, role: userRole, otp, branch, year, division },
-            process.env.JWT_SECRET,
+            JWT_SECRET,
             { expiresIn: '10m' }
         );
 
@@ -129,7 +131,7 @@ exports.verifyOTP = async (req, res) => {
         // Verify the registration token
         let decoded;
         try {
-            decoded = jwt.verify(registrationToken, process.env.JWT_SECRET);
+            decoded = jwt.verify(registrationToken, JWT_SECRET);
         } catch (err) {
             return res.status(400).json({ message: 'Session expired or invalid. Please register again.' });
         }
@@ -181,7 +183,7 @@ exports.verifyOTP = async (req, res) => {
         // Generate Login Token
         const token = jwt.sign(
             { id: userId, role: role, name: name, branch, year, division },
-            process.env.JWT_SECRET,
+            JWT_SECRET,
             { expiresIn: '1d' }
         );
 
@@ -205,7 +207,7 @@ exports.resendOTP = async (req, res) => {
         if (registrationToken) {
             let decoded;
             try {
-                decoded = jwt.verify(registrationToken, process.env.JWT_SECRET);
+                decoded = jwt.verify(registrationToken, JWT_SECRET);
             } catch (err) {
                 return res.status(400).json({ message: 'Session expired. Please register again.' });
             }
@@ -216,7 +218,7 @@ exports.resendOTP = async (req, res) => {
             // Create new token
             const newToken = jwt.sign(
                 { name, email, password, role, otp: newOtp },
-                process.env.JWT_SECRET,
+                JWT_SECRET,
                 { expiresIn: '10m' }
             );
 

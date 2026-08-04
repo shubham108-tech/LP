@@ -20,6 +20,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Middleware
 const allowedOrigins = [
@@ -59,19 +60,22 @@ const rateLimit = require('express-rate-limit');
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,
-    message: { message: 'Too many login attempts. Try again later.' }
+    message: { message: 'Too many login attempts. Try again later.' },
+    validate: { xForwardedForHeader: false }
 });
 
 const otpLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 5,
-    message: { message: 'Too many OTP requests. Try again later.' }
+    message: { message: 'Too many OTP requests. Try again later.' },
+    validate: { xForwardedForHeader: false }
 });
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
-    message: { message: 'Too many requests. Try again later.' }
+    message: { message: 'Too many requests. Try again later.' },
+    validate: { xForwardedForHeader: false }
 });
 
 // Apply Rate Limits
