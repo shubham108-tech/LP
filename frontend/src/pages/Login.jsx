@@ -16,9 +16,10 @@ const Login = () => {
         try {
             const user = await login(email, password);
             toast.success('Welcome back!');
-            if (location.state?.from) {
-                navigate(location.state.from);
-            } else if (user.role === 'admin') {
+            const targetFrom = location.state?.from;
+            if (targetFrom && targetFrom !== '/' && targetFrom !== '/login' && targetFrom !== '/register') {
+                navigate(targetFrom);
+            } else if (user.role === 'admin' || user.role === 'hod') {
                 navigate('/admin/dashboard');
             } else {
                 navigate('/teacher/dashboard');

@@ -1,79 +1,59 @@
-import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
+import { Suspense, lazy } from 'react';
 
-class ErrorBoundary extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false };
-    }
+// Auto-reload page when dynamic imports fail due to new deployment asset hash updates
+window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    window.location.reload();
+});
 
-    static getDerivedStateFromError() {
-        return { hasError: true };
-    }
+const safeLazy = (importFn) => {
+    return lazy(() =>
+        importFn().catch((err) => {
+            console.warn('Chunk load error, refreshing latest build assets...', err);
+            window.location.reload();
+            return new Promise(() => {});
+        })
+    );
+};
 
-    componentDidCatch(error, errorInfo) {
-        console.error('ErrorBoundary caught error:', error, errorInfo);
-    }
-
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
-                    <div className="p-4 bg-rose-500/20 rounded-full text-rose-400 text-5xl mb-4">🚀</div>
-                    <h2 className="text-2xl font-bold mb-2">New System Update Available!</h2>
-                    <p className="text-slate-400 max-w-md mb-6 text-sm">
-                        LibraryPro has been updated with new improvements. Click below to load the latest version.
-                    </p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition text-sm"
-                    >
-                        Refresh Page Now
-                    </button>
-                </div>
-            );
-        }
-        return this.props.children;
-    }
-}
-
-// Direct Page Imports (Eliminates Dynamic Import 404 Chunk Errors Completely)
-import Login from './pages/Login';
-import Register from './pages/Register';
-import OTPVerification from './pages/OTPVerification';
-import Landing from './pages/Landing';
+// Lazy Load Components
+const Login = safeLazy(() => import('./pages/Login'));
+const Register = safeLazy(() => import('./pages/Register'));
+const OTPVerification = safeLazy(() => import('./pages/OTPVerification'));
+const Landing = safeLazy(() => import('./pages/Landing'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import BooksManager from './pages/admin/BooksManager';
-import RequestsManager from './pages/admin/RequestsManager';
-import IssuesManager from './pages/admin/IssuesManager';
-import TeachersManager from './pages/admin/TeachersManager';
-import StudentsManager from './pages/admin/StudentsManager';
-import StationaryAdmin from './pages/admin/StationaryAdmin';
+const AdminDashboard = safeLazy(() => import('./pages/admin/AdminDashboard'));
+const BooksManager = safeLazy(() => import('./pages/admin/BooksManager'));
+const RequestsManager = safeLazy(() => import('./pages/admin/RequestsManager'));
+const IssuesManager = safeLazy(() => import('./pages/admin/IssuesManager'));
+const TeachersManager = safeLazy(() => import('./pages/admin/TeachersManager'));
+const StudentsManager = safeLazy(() => import('./pages/admin/StudentsManager'));
+const StationaryAdmin = safeLazy(() => import('./pages/admin/StationaryAdmin'));
 
 // Teacher Pages
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import TeacherHistory from './pages/teacher/MyHistory';
-import NotesManager from './pages/teacher/NotesManager';
-import AssignmentsManager from './pages/teacher/AssignmentsManager';
-import ExamsManager from './pages/teacher/ExamsManager';
-import ExamPortal from './pages/teacher/ExamPortal';
-import ScheduleManager from './pages/teacher/ScheduleManager';
-import AnalyticsDashboard from './pages/teacher/AnalyticsDashboard';
-import TeacherNotices from './pages/teacher/TeacherNotices';
-import TeacherPerformance from './pages/admin/TeacherPerformance';
-import FeedbackManager from './pages/admin/FeedbackManager';
-import ProfileSettings from './pages/ProfileSettings';
-import Feedback from './pages/Feedback';
-import StationaryTeacher from './pages/teacher/StationaryTeacher';
+const TeacherDashboard = safeLazy(() => import('./pages/teacher/TeacherDashboard'));
+const TeacherHistory = safeLazy(() => import('./pages/teacher/MyHistory'));
+const NotesManager = safeLazy(() => import('./pages/teacher/NotesManager'));
+const AssignmentsManager = safeLazy(() => import('./pages/teacher/AssignmentsManager'));
+const ExamsManager = safeLazy(() => import('./pages/teacher/ExamsManager'));
+const ExamPortal = safeLazy(() => import('./pages/teacher/ExamPortal'));
+const ScheduleManager = safeLazy(() => import('./pages/teacher/ScheduleManager'));
+const AnalyticsDashboard = safeLazy(() => import('./pages/teacher/AnalyticsDashboard'));
+const TeacherNotices = safeLazy(() => import('./pages/teacher/TeacherNotices'));
+const TeacherPerformance = safeLazy(() => import('./pages/admin/TeacherPerformance'));
+const FeedbackManager = safeLazy(() => import('./pages/admin/FeedbackManager'));
+const ProfileSettings = safeLazy(() => import('./pages/ProfileSettings'));
+const Feedback = safeLazy(() => import('./pages/Feedback'));
+const StationaryTeacher = safeLazy(() => import('./pages/teacher/StationaryTeacher'));
 
 // Engineering / Shared Pages
-import ProjectRepository from './pages/engineering/ProjectRepository';
-import PlacementZone from './pages/engineering/PlacementZone';
-import ResourceBooking from './pages/engineering/ResourceBooking';
+const ProjectRepository = safeLazy(() => import('./pages/engineering/ProjectRepository'));
+const PlacementZone = safeLazy(() => import('./pages/engineering/PlacementZone'));
+const ResourceBooking = safeLazy(() => import('./pages/engineering/ResourceBooking'));
 
 // Components
 import Layout from './components/Layout';
@@ -95,71 +75,69 @@ const PrivateRoute = ({ children }) => {
 const AdminRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) return <PageLoader />;
-    return user && (user.role === 'admin' || user.role === 'hod') ? children : <Navigate to="/login" replace />;
+    return user && (user.role === 'admin' || user.role === 'hod') ? children : <Navigate to="/teacher/dashboard" />;
 };
 
 function App() {
     return (
-        <ErrorBoundary>
+        <BrowserRouter>
             <AuthProvider>
-                <BrowserRouter basename="/LP">
-                    <Toaster position="top-right" />
-                    <Suspense fallback={<PageLoader />}>
-                        <Routes>
-                            {/* Public Routes */}
-                            <Route path="/" element={<Landing />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
-                            <Route path="/verify-otp" element={<OTPVerification />} />
+                <Toaster position="top-right" />
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/verify-otp" element={<OTPVerification />} />
+                        <Route path="/" element={<Landing />} />
 
-                            {/* Shared Protected Routes */}
-                            <Route path="/dashboard" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                                <Route index element={<Navigate to="/admin" replace />} />
-                                <Route path="profile" element={<ProfileSettings />} />
-                                <Route path="feedback" element={<Feedback />} />
-                            </Route>
+                        {/* Admin Routes */}
+                        <Route path="/admin" element={<PrivateRoute><AdminRoute><Layout /></AdminRoute></PrivateRoute>}>
+                            <Route index element={<Navigate to="/admin/dashboard" />} />
+                            <Route path="dashboard" element={<AdminDashboard />} />
+                            <Route path="books" element={<BooksManager />} />
+                            <Route path="requests" element={<RequestsManager />} />
+                            <Route path="issues" element={<IssuesManager />} />
+                            <Route path="teachers" element={<TeachersManager />} />
+                            <Route path="students" element={<StudentsManager />} />
+                            <Route path="stationary" element={<StationaryAdmin />} />
+                            <Route path="performance" element={<TeacherPerformance />} />
+                            <Route path="feedback" element={<FeedbackManager />} />
+                            <Route path="profile" element={<ProfileSettings />} />
+                        </Route>
 
-                            {/* Admin & HOD Routes */}
-                            <Route path="/admin" element={<AdminRoute><Layout /></AdminRoute>}>
-                                <Route index element={<AdminDashboard />} />
-                                <Route path="books" element={<BooksManager />} />
-                                <Route path="requests" element={<RequestsManager />} />
-                                <Route path="issues" element={<IssuesManager />} />
-                                <Route path="teachers" element={<TeachersManager />} />
-                                <Route path="students" element={<StudentsManager />} />
-                                <Route path="stationary" element={<StationaryAdmin />} />
-                                <Route path="performance" element={<TeacherPerformance />} />
-                                <Route path="feedback" element={<FeedbackManager />} />
-                            </Route>
+                        {/* Engineering / Shared Routes */}
+                        <Route path="/engineering" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                            <Route path="projects" element={<ProjectRepository />} />
+                            <Route path="placements" element={<PlacementZone />} />
+                            <Route path="resources" element={<ResourceBooking />} />
+                        </Route>
 
-                            {/* Teacher Routes */}
-                            <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                                <Route index element={<TeacherDashboard />} />
-                                <Route path="history" element={<TeacherHistory />} />
-                                <Route path="notes" element={<NotesManager />} />
-                                <Route path="assignments" element={<AssignmentsManager />} />
-                                <Route path="exams" element={<ExamsManager />} />
-                                <Route path="exam-portal" element={<ExamPortal />} />
-                                <Route path="schedules" element={<ScheduleManager />} />
-                                <Route path="analytics" element={<AnalyticsDashboard />} />
-                                <Route path="notices" element={<TeacherNotices />} />
-                                <Route path="stationary" element={<StationaryTeacher />} />
-                            </Route>
+                        {/* Teacher/Student Routes */}
+                        <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                            <Route index element={<Navigate to="/teacher/dashboard" />} />
+                            <Route path="dashboard" element={<TeacherDashboard />} />
+                            <Route path="history" element={<TeacherHistory />} />
+                            <Route path="notes" element={<NotesManager />} />
+                            <Route path="assignments" element={<AssignmentsManager />} />
+                            <Route path="exams" element={<ExamsManager />} />
+                            <Route path="schedule" element={<ScheduleManager />} />
+                            <Route path="stationary" element={<StationaryTeacher />} />
+                            <Route path="analytics" element={<AnalyticsDashboard />} />
+                            <Route path="notices" element={<TeacherNotices />} />
+                            <Route path="feedback" element={<Feedback />} />
+                            <Route path="performance" element={<TeacherPerformance />} />
+                            <Route path="profile" element={<ProfileSettings />} />
+                        </Route>
 
-                            {/* Shared Engineering Routes */}
-                            <Route path="/engineering" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                                <Route path="projects" element={<ProjectRepository />} />
-                                <Route path="placements" element={<PlacementZone />} />
-                                <Route path="booking" element={<ResourceBooking />} />
-                            </Route>
+                        {/* Exam Portal (Full Screen) */}
+                        <Route path="/teacher/exams/:id" element={<PrivateRoute><ExamPortal /></PrivateRoute>} />
 
-                            {/* Fallback */}
-                            <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                    </Suspense>
-                </BrowserRouter>
+                        {/* Catch all */}
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </Suspense>
             </AuthProvider>
-        </ErrorBoundary>
+        </BrowserRouter>
     );
 }
 
