@@ -517,7 +517,12 @@ const dbWrapper = {
                     console.log(`Table ${t} truncate skipped:`, e.message);
                 }
             }
-            await initPgSchema();
+            // Seed ONLY 1 System Admin user
+            const hashAdmin = bcrypt.hashSync('admin123', 10);
+            await pgPool.query(
+                "INSERT INTO users (id, name, email, password, role, is_verified) VALUES (1, $1, $2, $3, 'admin', true)",
+                ['System Admin', 'admin@library.com', hashAdmin]
+            );
             return true;
         }
 
@@ -532,11 +537,34 @@ const dbWrapper = {
                 try { await mysqlPool.promise().query(`TRUNCATE TABLE ${t};`); } catch (e) {}
             }
             await mysqlPool.promise().query("SET FOREIGN_KEY_CHECKS = 1;");
+            const hashAdmin = bcrypt.hashSync('admin123', 10);
+            await mysqlPool.promise().query(
+                "INSERT INTO users (id, name, email, password, role, is_verified) VALUES (1, 'System Admin', 'admin@library.com', ?, 'admin', true)",
+                [hashAdmin]
+            );
             return true;
         }
 
-        dbData = null;
-        initPureJsFallback();
+        const hashAdmin = bcrypt.hashSync('admin123', 10);
+        dbData = {
+            users: [
+                { id: 1, name: 'System Admin', email: 'admin@library.com', password: hashAdmin, role: 'admin', is_verified: 1, created_at: new Date().toISOString() }
+            ],
+            books: [],
+            stationary_items: [],
+            stationary_requests: [],
+            stationary_ledger: [],
+            book_issues: [],
+            book_requests: [],
+            notes: [],
+            projects: [],
+            reviews: [],
+            suggestions: [],
+            discussions: [],
+            notifications: [],
+            feedback: []
+        };
+        savePureJsData();
         return true;
     }
 };
