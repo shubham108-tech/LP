@@ -302,7 +302,7 @@ const TeachersManager = () => {
                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                                         <a
                                             href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                                                `🎓 *LibraryPro Login Info*\n\nHello *${teacher.name}*,\nHere is your portal login information:\n\n📧 *Email:* ${teacher.email}\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
+                                                `🎓 *LibraryPro Login Credentials*\n\nHello *${teacher.name}*,\nHere is your portal login information:\n\n📧 *Email:* ${teacher.email}\n🔑 *Default Password:* password123\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
                                             )}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
