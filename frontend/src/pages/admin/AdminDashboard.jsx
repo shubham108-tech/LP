@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Link } from 'react-router-dom';
 import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine } from 'react-icons/ri';
+import toast from 'react-hot-toast';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import Leaderboard from '../../components/Leaderboard';
 
 const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
     <div className="p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center">
