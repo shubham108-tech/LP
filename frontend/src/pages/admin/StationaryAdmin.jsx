@@ -574,9 +574,12 @@ const StationaryAdmin = () => {
                             <tbody className="divide-y divide-slate-100 text-sm">
                                 {requests.map(req => (
                                     <tr key={req.id} className="hover:bg-slate-50/80 transition">
-                                        <td className="p-3 font-semibold text-slate-800">
-                                            #REQ-{req.id}
-                                            <div className="text-xs text-slate-400 font-normal">{new Date(req.requested_at).toLocaleDateString()}</div>
+                                        <td className="p-3">
+                                            <div className="font-bold text-slate-800">#REQ-{req.id}</div>
+                                            <div className="text-xs text-indigo-700 font-semibold flex items-center gap-1">
+                                                <span>📅</span> {new Date(req.requested_at).toLocaleDateString()}
+                                                <span>⏰</span> {new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
                                         </td>
                                         <td className="p-3">
                                             <div className="font-bold text-slate-800">{req.user_name}</div>
@@ -601,6 +604,13 @@ const StationaryAdmin = () => {
                                             }`}>
                                                 {req.status}
                                             </span>
+                                            {req.acted_at ? (
+                                                <div className="text-[11px] text-slate-500 font-mono mt-1">
+                                                    Action: {new Date(req.acted_at).toLocaleDateString()} {new Date(req.acted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-[11px] text-amber-600 font-medium mt-1">Awaiting Action</div>
+                                            )}
                                         </td>
                                         <td className="p-3 text-right space-x-1">
                                             {req.status === 'Pending' && (
