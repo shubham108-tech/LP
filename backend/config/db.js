@@ -235,6 +235,8 @@ async function initPgSchema() {
                 student_id INT NOT NULL,
                 score INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS system_modules (
                 module_key VARCHAR(100) PRIMARY KEY,
                 module_name VARCHAR(100) NOT NULL,
