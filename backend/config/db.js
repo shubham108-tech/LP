@@ -84,6 +84,8 @@ async function initPgSchema() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE books ALTER COLUMN image_url TYPE TEXT;
+            ALTER TABLE books ALTER COLUMN pdf_url TYPE TEXT;
 
             CREATE TABLE IF NOT EXISTS stationary_items (
                 id SERIAL PRIMARY KEY,
@@ -320,6 +322,10 @@ const dbWrapper = {
                 pgSql = pgSql.replace(/"admin"/g, "'admin'");
                 pgSql = pgSql.replace(/"teacher"/g, "'teacher'");
                 pgSql = pgSql.replace(/"student"/g, "'student'");
+
+                if (pgSql.trim().toUpperCase().startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+                    pgSql += ' RETURNING id';
+                }
 
                 const res = await pgPool.query(pgSql, params);
                 if (pgSql.trim().toUpperCase().startsWith('INSERT')) {

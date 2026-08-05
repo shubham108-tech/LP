@@ -197,9 +197,9 @@ const BooksManager = () => {
             fetchBooks();
             closeFormModal();
         } catch (error) {
-            let msg = error.response?.data?.message || error.message || 'Operation failed';
+            let msg = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === 'string' ? error.response.data : error.message) || 'Operation failed';
             if (error.response?.status === 413) {
-                msg = 'File too large for single upload (Vercel Limit). Retrying with Chunked Upload...';
+                msg = 'File too large for single upload (Vercel Payload Limit).';
             }
             toast.error(msg, { id: toastId });
         }

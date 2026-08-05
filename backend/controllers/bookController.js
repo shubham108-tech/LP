@@ -10,13 +10,16 @@ exports.getAllBooks = async (req, res) => {
 };
 
 exports.addBook = async (req, res) => {
-    const { book_name, author, category, total_quantity } = req.body;
+    const { book_name, author, category, total_quantity, available_quantity } = req.body;
 
-    if (!book_name || !author || !total_quantity) {
+    if (!book_name || !author || total_quantity === undefined || total_quantity === null || total_quantity === '') {
         return res.status(400).json({ message: 'Missing required fields (Book Title, Author, or Quantity)' });
     }
 
-    const available_quantity = total_quantity;
+    const totalQty = parseInt(total_quantity) || 1;
+    const availQty = available_quantity !== undefined && available_quantity !== null && available_quantity !== ''
+        ? parseInt(available_quantity)
+        : totalQty;
 
     let image_url = req.body.uploaded_image_url || null;
     let pdf_url = req.body.uploaded_pdf_url || null;
@@ -35,7 +38,7 @@ exports.addBook = async (req, res) => {
     try {
         const [result] = await db.query(
             'INSERT INTO books (book_name, author, category, total_quantity, available_quantity, image_url, pdf_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [book_name, author, category || 'General', total_quantity, available_quantity, image_url, pdf_url]
+            [book_name, author, category || 'General', totalQty, availQty, image_url, pdf_url]
         );
         res.status(201).json({ message: 'Book added successfully', bookId: result.insertId });
     } catch (error) {
@@ -63,8 +66,13 @@ exports.updateBook = async (req, res) => {
     }
 
     try {
+        const totalQty = parseInt(total_quantity) || 1;
+        const availQty = available_quantity !== undefined && available_quantity !== null && available_quantity !== ''
+            ? parseInt(available_quantity)
+            : totalQty;
+
         let query = 'UPDATE books SET book_name = ?, author = ?, category = ?, total_quantity = ?, available_quantity = ?';
-        const params = [book_name, author, category || 'General', total_quantity, available_quantity];
+        const params = [book_name, author, category || 'General', totalQty, availQty];
 
         if (image_url) {
             query += ', image_url = ?';
