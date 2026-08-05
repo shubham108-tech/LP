@@ -276,7 +276,7 @@ const StudentsManager = () => {
                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                                         <a
                                             href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                                                `🎓 *LibraryPro Login Credentials*\n\nHello *${student.name}*,\nHere is your portal login information:\n\n📧 *Email:* ${student.email}\n🔑 *Default Password:* password123\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
+                                                `🎓 *LibraryPro Login Credentials*\n\nHello *${student.name}*,\nHere is your portal login information:\n\n📧 *Email:* ${student.email}\n🔑 *Password:* password123\n🌐 *Login Portal:* https://shubham108-tech.github.io/LP/\n\n⚠️ *Instruction:* Kripya page refresh 🔄 na karein. Website me navigate karne ke liye Back ⬅️ aur Forward ➡️ buttons ka upayog karein.`
                                             )}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -550,7 +550,7 @@ const StudentsManager = () => {
                             <div className="space-y-2 pt-2">
                                 <a
                                     href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                                        `🎓 *LibraryPro Account Credentials*\n\nHello *${createdUser.name}*,\nYour Student account has been created!\n\n📧 *Email:* ${createdUser.email}\n🔑 *Password:* ${createdUser.password}\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
+                                        `🎓 *LibraryPro Account Credentials*\n\nHello *${createdUser.name}*,\nYour Student account credentials are:\n\n📧 *Email:* ${createdUser.email}\n🔑 *Password:* ${createdUser.password}\n🌐 *Login Portal:* https://shubham108-tech.github.io/LP/\n\n⚠️ *Instruction:* Kripya page refresh 🔄 na karein. Website me navigate karne ke liye Back ⬅️ aur Forward ➡️ buttons ka upayog karein.`
                                     )}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -561,7 +561,7 @@ const StudentsManager = () => {
 
                                 <button
                                     onClick={() => {
-                                        const text = `LibraryPro Login Credentials:\nName: ${createdUser.name}\nEmail: ${createdUser.email}\nPassword: ${createdUser.password}\nRole: ${createdUser.role}\nLogin URL: https://lp-wheat-nu.vercel.app/login`;
+                                        const text = `LibraryPro Login Credentials:\nName: ${createdUser.name}\nEmail: ${createdUser.email}\nPassword: ${createdUser.password}\nRole: ${createdUser.role}\nLogin URL: https://shubham108-tech.github.io/LP/\nNote: Please do not refresh the page, use back and forward navigation arrows.`;
                                         navigator.clipboard.writeText(text);
                                         toast.success('Credentials copied to clipboard!');
                                     }}

@@ -557,7 +557,7 @@ exports.createUser = async (req, res) => {
         // Send welcome email with credentials in background if SMTP configured
         try {
             const { sendEmail } = require('../utils/email');
-            const loginUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/login` : 'https://lp-wheat-nu.vercel.app/login';
+            const loginUrl = 'https://shubham108-tech.github.io/LP/';
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #e5e7eb; border-radius: 12px;">
                     <h2 style="color: #4f46e5; margin-top: 0;">Welcome to LibraryPro</h2>
