@@ -147,6 +147,15 @@ const TeachersManager = () => {
             });
             toast.success('Teacher updated');
             setShowEditModal(false);
+            if (formData.password && formData.password.trim() !== '') {
+                setCreatedUser({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    role: formData.role,
+                    branch: formData.branch
+                });
+            }
             fetchTeachers();
         } catch (error) {
             toast.error('Update failed');
@@ -291,6 +300,17 @@ const TeachersManager = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <a
+                                            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                                                `🎓 *LibraryPro Login Info*\n\nHello *${teacher.name}*,\nHere is your portal login information:\n\n📧 *Email:* ${teacher.email}\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
+                                            )}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                                            title="Share Login Info via WhatsApp"
+                                        >
+                                            <RiWhatsappLine size={18} />
+                                        </a>
                                         <button onClick={() => fetchHistory(teacher)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="View History"><RiHistoryLine size={18} /></button>
                                         <button onClick={() => openEdit(teacher)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Edit details"><RiPencilLine size={18} /></button>
                                         <button onClick={() => handleDelete(teacher.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Account"><RiDeleteBinLine size={18} /></button>
