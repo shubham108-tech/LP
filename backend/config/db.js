@@ -69,8 +69,10 @@ async function initPgSchema() {
                 otp_expiry TIMESTAMP,
                 is_verified BOOLEAN DEFAULT TRUE,
                 profile_image VARCHAR(255),
+                stationary_blocked BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS stationary_blocked BOOLEAN DEFAULT FALSE;
 
             CREATE TABLE IF NOT EXISTS books (
                 id SERIAL PRIMARY KEY,
