@@ -152,6 +152,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
 app.use('/api/gamification', require('./routes/gamificationRoutes'));
 app.use('/api/stationary', require('./routes/stationaryRoutes'));
+app.use('/api/modules', require('./routes/moduleRoutes'));
 
 
 // ===================================================

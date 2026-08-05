@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
-import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine } from 'react-icons/ri';
-import toast from 'react-hot-toast';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import Leaderboard from '../../components/Leaderboard';
+import { Link } from 'react-router-dom';
+import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine } from 'react-icons/ri';
 
 const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
     <div className="p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center">
@@ -97,13 +95,22 @@ const AdminDashboard = () => {
         <div>
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
-                <button
-                    onClick={handleDownloadReport}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-medium"
-                >
-                    <RiFileDownloadLine className="text-xl" />
-                    <span>Download Report</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <Link
+                        to="/admin/modules"
+                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all shadow-md shadow-indigo-500/20 font-semibold text-sm"
+                    >
+                        <RiToggleLine className="text-xl" />
+                        <span>Menu & Module Control</span>
+                    </Link>
+                    <button
+                        onClick={handleDownloadReport}
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-medium text-sm"
+                    >
+                        <RiFileDownloadLine className="text-xl" />
+                        <span>Download Report</span>
+                    </button>
+                </div>
             </div>
 
             {/* Leaderboard */}

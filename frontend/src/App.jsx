@@ -33,6 +33,7 @@ const IssuesManager = safeLazy(() => import('./pages/admin/IssuesManager'));
 const TeachersManager = safeLazy(() => import('./pages/admin/TeachersManager'));
 const StudentsManager = safeLazy(() => import('./pages/admin/StudentsManager'));
 const StationaryAdmin = safeLazy(() => import('./pages/admin/StationaryAdmin'));
+const ModuleControlManager = safeLazy(() => import('./pages/admin/ModuleControlManager'));
 
 // Teacher Pages
 const TeacherDashboard = safeLazy(() => import('./pages/teacher/TeacherDashboard'));
@@ -94,6 +95,7 @@ function App() {
                         <Route path="/admin" element={<PrivateRoute><AdminRoute><Layout /></AdminRoute></PrivateRoute>}>
                             <Route index element={<Navigate to="/admin/dashboard" />} />
                             <Route path="dashboard" element={<AdminDashboard />} />
+                            <Route path="modules" element={<ModuleControlManager />} />
                             <Route path="books" element={<BooksManager />} />
                             <Route path="requests" element={<RequestsManager />} />
                             <Route path="issues" element={<IssuesManager />} />

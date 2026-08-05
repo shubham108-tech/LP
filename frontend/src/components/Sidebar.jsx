@@ -1,16 +1,42 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SERVER_URL } from '../config';
-import { RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine, RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine, RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine, RiChat1Line, RiMailSendLine, RiFolderOpenLine, RiComputerLine, RiBriefcaseLine, RiStore2Line } from 'react-icons/ri';
+import api from '../services/api';
+import {
+    RiDashboardLine, RiBookLine, RiExchangeLine, RiHistoryLine, RiLogoutBoxLine,
+    RiUserLine, RiCloseLine, RiUserSmileLine, RiFileTextLine, RiTaskLine, RiDraftLine,
+    RiCalendarEventLine, RiBarChartGroupedLine, RiLineChartLine, RiChat1Line,
+    RiMailSendLine, RiFolderOpenLine, RiBriefcaseLine, RiStore2Line, RiToggleLine
+} from 'react-icons/ri';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const [modules, setModules] = useState({});
+
+    useEffect(() => {
+        fetchModules();
+        window.addEventListener('modulesUpdated', fetchModules);
+        return () => window.removeEventListener('modulesUpdated', fetchModules);
+    }, []);
+
+    const fetchModules = async () => {
+        try {
+            const res = await api.get('/modules');
+            if (res.data && res.data.modules) {
+                setModules(res.data.modules);
+            }
+        } catch (error) {
+            console.log('Sidebar modules load skipped:', error.message);
+        }
+    };
 
     const isActive = (path) => location.pathname === path;
 
     const adminLinks = [
         { path: '/admin/dashboard', icon: RiDashboardLine, label: 'Dashboard' },
+        { path: '/admin/modules', icon: RiToggleLine, label: 'Menu Module Control' },
         { path: '/admin/books', icon: RiBookLine, label: 'Books Manager' },
         { path: '/admin/requests', icon: RiExchangeLine, label: 'Requests' },
         { path: '/admin/issues', icon: RiHistoryLine, label: 'Issued Books' },
@@ -22,49 +48,56 @@ const Sidebar = ({ isOpen, onClose }) => {
     ];
 
     const teacherLinks = [
-        { path: '/teacher/dashboard', icon: RiBookLine, label: 'Browse Books' },
-        { path: '/engineering/projects', icon: RiFolderOpenLine, label: 'Project Repository' },
-        { path: '/teacher/history', icon: RiHistoryLine, label: 'My History' },
-        { path: '/teacher/notes', icon: RiFileTextLine, label: 'Lab Manuals / Notes' },
-        { path: '/teacher/assignments', icon: RiTaskLine, label: 'Assignments' },
-        { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams' },
-        { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Schedule' },
-        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices' },
-        { path: '/engineering/placements', icon: RiBriefcaseLine, label: 'Placement Cell' },
-        { path: '/engineering/resources', icon: RiCalendarEventLine, label: 'Resource Booking' },
-        { path: '/teacher/stationary', icon: RiStore2Line, label: 'Stationary' },
-        { path: '/teacher/analytics', icon: RiBarChartGroupedLine, label: 'Analytics' },
-        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Feedback' },
+        { path: '/teacher/dashboard', icon: RiBookLine, label: 'Browse Books', moduleKey: 'browse_books' },
+        { path: '/engineering/projects', icon: RiFolderOpenLine, label: 'Project Repository', moduleKey: 'project_repository' },
+        { path: '/teacher/history', icon: RiHistoryLine, label: 'My History', moduleKey: 'my_history' },
+        { path: '/teacher/notes', icon: RiFileTextLine, label: 'Lab Manuals / Notes', moduleKey: 'notes' },
+        { path: '/teacher/assignments', icon: RiTaskLine, label: 'Assignments', moduleKey: 'assignments' },
+        { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams', moduleKey: 'exams' },
+        { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Schedule', moduleKey: 'schedule' },
+        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices', moduleKey: 'notices' },
+        { path: '/engineering/placements', icon: RiBriefcaseLine, label: 'Placement Cell', moduleKey: 'placements' },
+        { path: '/engineering/resources', icon: RiCalendarEventLine, label: 'Resource Booking', moduleKey: 'resources' },
+        { path: '/teacher/stationary', icon: RiStore2Line, label: 'Stationary', moduleKey: 'stationary' },
+        { path: '/teacher/analytics', icon: RiBarChartGroupedLine, label: 'Analytics', moduleKey: 'analytics' },
+        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Feedback', moduleKey: 'feedback' },
+    ];
+
+    const studentLinks = [
+        { path: '/teacher/dashboard', icon: RiBookLine, label: 'Browse Books', moduleKey: 'browse_books' },
+        { path: '/engineering/projects', icon: RiFolderOpenLine, label: 'Project Repository', moduleKey: 'project_repository' },
+        { path: '/engineering/placements', icon: RiBriefcaseLine, label: 'Placement Cell', moduleKey: 'placements' },
+        { path: '/engineering/resources', icon: RiCalendarEventLine, label: 'Resource Booking', moduleKey: 'resources' },
+        { path: '/teacher/history', icon: RiHistoryLine, label: 'My History', moduleKey: 'my_history' },
+        { path: '/teacher/notes', icon: RiFileTextLine, label: 'Lab Manuals / Notes', moduleKey: 'notes' },
+        { path: '/teacher/assignments', icon: RiTaskLine, label: 'My Assignments', moduleKey: 'assignments' },
+        { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams', moduleKey: 'exams' },
+        { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Class Schedule', moduleKey: 'schedule' },
+        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices', moduleKey: 'notices' },
+        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Feedback', moduleKey: 'feedback' },
     ];
 
     let computedTeacherLinks = [...teacherLinks];
     // If HOD, add performance & admin stationary link to teacher views
     if (user?.role === 'hod') {
-        computedTeacherLinks.push({ path: '/admin/stationary', icon: RiStore2Line, label: 'Stationary & Ledger' });
-        computedTeacherLinks.push({ path: '/teacher/performance', icon: RiLineChartLine, label: 'Teacher performance' });
+        computedTeacherLinks.push({ path: '/admin/stationary', icon: RiStore2Line, label: 'Stationary & Ledger', moduleKey: 'stationary' });
+        computedTeacherLinks.push({ path: '/teacher/performance', icon: RiLineChartLine, label: 'Teacher performance', moduleKey: 'analytics' });
         computedTeacherLinks.push({ path: '/admin/students', icon: RiUserSmileLine, label: 'My Students' });
         computedTeacherLinks = computedTeacherLinks.filter(link => !['/teacher/assignments', '/teacher/exams'].includes(link.path));
     }
 
-    const studentLinks = [
-        { path: '/teacher/dashboard', icon: RiBookLine, label: 'Browse Books' },
-        { path: '/engineering/projects', icon: RiFolderOpenLine, label: 'Project Repository' },
-        { path: '/engineering/placements', icon: RiBriefcaseLine, label: 'Placement Cell' },
-        { path: '/engineering/resources', icon: RiCalendarEventLine, label: 'Resource Booking' },
-        { path: '/teacher/history', icon: RiHistoryLine, label: 'My History' },
-        { path: '/teacher/notes', icon: RiFileTextLine, label: 'Lab Manuals / Notes' },
-        { path: '/teacher/assignments', icon: RiTaskLine, label: 'My Assignments' },
-        { path: '/teacher/exams', icon: RiDraftLine, label: 'Online Exams' },
-        { path: '/teacher/schedule', icon: RiCalendarEventLine, label: 'Class Schedule' },
-        { path: '/teacher/notices', icon: RiMailSendLine, label: 'Class Notices' },
-        { path: '/teacher/feedback', icon: RiChat1Line, label: 'Feedback' },
-    ];
-    const links = user?.role === 'admin' ? adminLinks : (user?.role === 'student' ? studentLinks : computedTeacherLinks);
+    let rawLinks = user?.role === 'admin' ? adminLinks : (user?.role === 'student' ? studentLinks : computedTeacherLinks);
+
+    // Filter links based on Admin module toggles for non-admin users
+    const links = user?.role === 'admin'
+        ? rawLinks
+        : rawLinks.filter(link => !link.moduleKey || modules[link.moduleKey] !== false);
 
     return (
         <div
-            className={`fixed flex flex-col top-0 left-0 text-white z-50 h-screen w-64 bg-[#12072b] transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-purple-950/60 ${isOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+            className={`fixed flex flex-col top-0 left-0 text-white z-50 h-screen w-64 bg-[#12072b] transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-purple-950/60 ${
+                isOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
         >
             <div className="flex items-center justify-between p-6">
                 <div className="text-2xl font-black bg-gradient-to-r from-fuchsia-400 via-purple-300 to-pink-400 text-transparent bg-clip-text tracking-tight">
@@ -87,10 +120,11 @@ const Sidebar = ({ isOpen, onClose }) => {
                         key={link.path}
                         to={link.path}
                         onClick={onClose}
-                        className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 group ${isActive(link.path)
-                            ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-lg shadow-fuchsia-600/30 text-white font-bold'
-                            : 'text-purple-200/70 hover:bg-purple-900/30 hover:text-white'
-                            }`}
+                        className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 group ${
+                            isActive(link.path)
+                                ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-lg shadow-fuchsia-600/30 text-white font-bold'
+                                : 'text-purple-200/70 hover:bg-purple-900/30 hover:text-white'
+                        }`}
                     >
                         <link.icon className={`mr-3 text-xl ${isActive(link.path) ? 'text-white' : 'text-purple-400 group-hover:text-white'}`} />
                         <span className="font-semibold">{link.label}</span>

@@ -235,7 +235,31 @@ async function initPgSchema() {
                 student_id INT NOT NULL,
                 score INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            CREATE TABLE IF NOT EXISTS system_modules (
+                module_key VARCHAR(100) PRIMARY KEY,
+                module_name VARCHAR(100) NOT NULL,
+                is_enabled BOOLEAN DEFAULT TRUE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        `);
+
+        // Seed default system modules if not exist
+        await pgPool.query(`
+            INSERT INTO system_modules (module_key, module_name, is_enabled) VALUES
+            ('browse_books', 'Browse Books', true),
+            ('project_repository', 'Project Repository', true),
+            ('my_history', 'My History', true),
+            ('notes', 'Lab Manuals / Notes', true),
+            ('assignments', 'Assignments', true),
+            ('exams', 'Online Exams', true),
+            ('schedule', 'Schedule', true),
+            ('notices', 'Class Notices', true),
+            ('placements', 'Placement Cell', true),
+            ('resources', 'Resource Booking', true),
+            ('stationary', 'Stationary', true),
+            ('analytics', 'Analytics', true),
+            ('feedback', 'Feedback', true)
+            ON CONFLICT (module_key) DO NOTHING;
         `);
 
         // Ensure System Admin user exists in Postgres
@@ -296,7 +320,22 @@ function initPureJsFallback() {
             suggestions: [],
             discussions: [],
             notifications: [],
-            feedback: []
+            feedback: [],
+            system_modules: [
+                { module_key: 'browse_books', module_name: 'Browse Books', is_enabled: 1 },
+                { module_key: 'project_repository', module_name: 'Project Repository', is_enabled: 1 },
+                { module_key: 'my_history', module_name: 'My History', is_enabled: 1 },
+                { module_key: 'notes', module_name: 'Lab Manuals / Notes', is_enabled: 1 },
+                { module_key: 'assignments', module_name: 'Assignments', is_enabled: 1 },
+                { module_key: 'exams', module_name: 'Online Exams', is_enabled: 1 },
+                { module_key: 'schedule', module_name: 'Schedule', is_enabled: 1 },
+                { module_key: 'notices', module_name: 'Class Notices', is_enabled: 1 },
+                { module_key: 'placements', module_name: 'Placement Cell', is_enabled: 1 },
+                { module_key: 'resources', module_name: 'Resource Booking', is_enabled: 1 },
+                { module_key: 'stationary', module_name: 'Stationary', is_enabled: 1 },
+                { module_key: 'analytics', module_name: 'Analytics', is_enabled: 1 },
+                { module_key: 'feedback', module_name: 'Feedback', is_enabled: 1 }
+            ]
         };
         savePureJsData();
     }
