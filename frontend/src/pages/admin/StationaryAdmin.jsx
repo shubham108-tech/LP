@@ -317,9 +317,9 @@ const StationaryAdmin = () => {
             </h1>
 
             {/* Navigation Tabs */}
-            <div className="flex flex-wrap space-x-4 mb-6 border-b border-purple-100">
+            <div className="flex flex-wrap space-x-2 md:space-x-4 mb-6 border-b border-purple-100 gap-y-2">
                 <button
-                    className={`pb-2 px-1 font-semibold text-sm flex items-center gap-2 ${
+                    className={`pb-2 px-2 font-semibold text-sm flex items-center gap-2 transition ${
                         activeTab === 'inventory' 
                             ? 'border-b-2 border-fuchsia-600 text-fuchsia-600 font-bold' 
                             : 'text-slate-500 hover:text-slate-800'
@@ -327,10 +327,10 @@ const StationaryAdmin = () => {
                     onClick={() => setActiveTab('inventory')}
                 >
                     <RiArchiveLine size={18} />
-                    Inventory ({items.length})
+                    Stock Inventory ({items.length})
                 </button>
                 <button
-                    className={`pb-2 px-1 font-semibold text-sm flex items-center gap-2 relative ${
+                    className={`pb-2 px-2 font-semibold text-sm flex items-center gap-2 relative transition ${
                         activeTab === 'requests' 
                             ? 'border-b-2 border-fuchsia-600 text-fuchsia-600 font-bold' 
                             : 'text-slate-500 hover:text-slate-800'
@@ -338,7 +338,7 @@ const StationaryAdmin = () => {
                     onClick={() => setActiveTab('requests')}
                 >
                     <RiBookLine size={18} />
-                    Requests
+                    Teacher Requests
                     {requests.filter(r => r.status === 'Pending').length > 0 && (
                         <span className="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full font-bold">
                             {requests.filter(r => r.status === 'Pending').length}
@@ -346,18 +346,29 @@ const StationaryAdmin = () => {
                     )}
                 </button>
                 <button
-                    className={`pb-2 px-1 font-semibold text-sm flex items-center gap-2 ${
-                        activeTab === 'ledger' 
-                            ? 'border-b-2 border-fuchsia-600 text-fuchsia-600 font-bold' 
+                    className={`pb-2 px-2 font-semibold text-sm flex items-center gap-2 transition ${
+                        activeTab === 'issue_logs' 
+                            ? 'border-b-2 border-indigo-600 text-indigo-600 font-bold' 
                             : 'text-slate-500 hover:text-slate-800'
                     }`}
-                    onClick={() => setActiveTab('ledger')}
+                    onClick={() => setActiveTab('issue_logs')}
                 >
                     <RiArrowUpDownLine size={18} />
-                    Stock Register (Ledger)
+                    📤 Issue & Dispatch Logs
                 </button>
                 <button
-                    className={`pb-2 px-1 font-semibold text-sm flex items-center gap-2 ${
+                    className={`pb-2 px-2 font-semibold text-sm flex items-center gap-2 transition ${
+                        activeTab === 'purchase_logs' 
+                            ? 'border-b-2 border-emerald-600 text-emerald-600 font-bold' 
+                            : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                    onClick={() => setActiveTab('purchase_logs')}
+                >
+                    <RiStore2Line size={18} />
+                    🛍️ Admin Purchase Register
+                </button>
+                <button
+                    className={`pb-2 px-2 font-semibold text-sm flex items-center gap-2 transition ${
                         activeTab === 'reports' 
                             ? 'border-b-2 border-fuchsia-600 text-fuchsia-600 font-bold' 
                             : 'text-slate-500 hover:text-slate-800'
@@ -365,7 +376,7 @@ const StationaryAdmin = () => {
                     onClick={() => setActiveTab('reports')}
                 >
                     <RiBarChartBoxLine size={18} />
-                    Analytics & Consumption Graphs
+                    Analytics & Consumption
                 </button>
             </div>
 
@@ -635,17 +646,17 @@ const StationaryAdmin = () => {
                         </table>
                     </div>
                 </div>
-            ) : activeTab === 'ledger' ? (
-                /* Automatic Stock Movement Register (Ledger Table) */
+            ) : activeTab === 'issue_logs' ? (
+                /* Issue & Dispatch Logs (Teacher / Staff Requisition Issues) */
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <RiArrowUpDownLine className="text-indigo-600" />
-                                Stock Movement Register (Ledger Log)
+                                📤 Stationary Issue & Dispatch Register
                             </h2>
                             <p className="text-xs text-slate-500">
-                                Automatic transaction log showing Received Qty (+), Issued Qty (-), and Real-time Balance Stock.
+                                Complete log of items issued to Teachers and Staff, showing exact Date & Time, Teacher Name, Quantity, and Balance.
                             </p>
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -653,8 +664,124 @@ const StationaryAdmin = () => {
                                 <RiSearchLine className="absolute left-3 top-3 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Filter by item, type, ref..."
+                                    placeholder="Filter by teacher, item..."
                                     className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    value={ledgerSearch}
+                                    onChange={e => setLedgerSearch(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={exportLedgerToCSV}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
+                            >
+                                <RiDownloadLine size={16} /> Export Issue Log CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-indigo-950 text-white text-xs uppercase tracking-wider">
+                                    <th className="p-3 rounded-tl-xl text-center">Sr. No.</th>
+                                    <th className="p-3">Issue Date & Time</th>
+                                    <th className="p-3">Teacher / Recipient</th>
+                                    <th className="p-3">Item & Category</th>
+                                    <th className="p-3 text-center">Action Type</th>
+                                    <th className="p-3 text-right">Issued Qty (-)</th>
+                                    <th className="p-3 text-right font-black">Balance Stock</th>
+                                    <th className="p-3">Ref / Reason</th>
+                                    <th className="p-3 rounded-tr-xl text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-sm">
+                                {filteredLedger
+                                    .filter(row => row.transaction_type === 'ISSUED' || row.transaction_type === 'RETURNED')
+                                    .map((row, idx) => (
+                                        <tr key={row.id} className="hover:bg-slate-50 transition">
+                                            <td className="p-3 text-center font-bold text-slate-400 text-xs">
+                                                #{idx + 1}
+                                            </td>
+                                            <td className="p-3 text-xs text-slate-600">
+                                                <div className="font-semibold text-slate-800">{new Date(row.date).toLocaleDateString()}</div>
+                                                <div className="text-slate-400 font-mono">{new Date(row.date).toLocaleTimeString()}</div>
+                                            </td>
+                                            <td className="p-3">
+                                                <div className="font-bold text-slate-800">{row.user_name || 'Teacher / Staff'}</div>
+                                                <div className="text-xs text-slate-400 capitalize">{row.user_role || 'teacher'}</div>
+                                            </td>
+                                            <td className="p-3">
+                                                <div className="font-bold text-slate-800">{row.item_name}</div>
+                                                <div className="text-xs text-slate-400 uppercase font-medium">{row.category}</div>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
+                                                    row.transaction_type === 'ISSUED' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800'
+                                                }`}>
+                                                    {row.transaction_type}
+                                                </span>
+                                            </td>
+                                            <td className="p-3 text-right font-bold text-rose-600">
+                                                -{row.issued_qty || row.received_qty} {row.unit}
+                                            </td>
+                                            <td className="p-3 text-right font-black text-indigo-700 text-base bg-indigo-50/50">
+                                                {row.balance} <span className="text-xs font-normal text-slate-500">{row.unit}</span>
+                                            </td>
+                                            <td className="p-3 text-xs">
+                                                <div className="font-semibold text-slate-700">{row.reference_no}</div>
+                                                <div className="text-slate-400 max-w-xs truncate">{row.notes}</div>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button
+                                                        onClick={() => setEditingLedger(row)}
+                                                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                        title="Edit Entry"
+                                                    >
+                                                        <RiPencilLine size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteLedger(row.id)}
+                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                        title="Delete Entry"
+                                                    >
+                                                        <RiDeleteBinLine size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                {filteredLedger.filter(row => row.transaction_type === 'ISSUED' || row.transaction_type === 'RETURNED').length === 0 && (
+                                    <tr>
+                                        <td colSpan="9" className="p-8 text-center text-slate-400">
+                                            No stationary issue entries recorded yet.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : activeTab === 'purchase_logs' ? (
+                /* Admin Purchase & Restock Register */
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <RiStore2Line className="text-emerald-600" />
+                                🛍️ Admin Purchase & Restock Register
+                            </h2>
+                            <p className="text-xs text-slate-500">
+                                Complete record of stationary items purchased or added by Admin with Bill Numbers, Quantity, Date & Time.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-64">
+                                <RiSearchLine className="absolute left-3 top-3 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Filter by bill no, item..."
+                                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     value={ledgerSearch}
                                     onChange={e => setLedgerSearch(e.target.value)}
                                 />
@@ -663,7 +790,7 @@ const StationaryAdmin = () => {
                                 onClick={exportLedgerToCSV}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition whitespace-nowrap"
                             >
-                                <RiDownloadLine size={16} /> Export CSV
+                                <RiDownloadLine size={16} /> Export Purchase CSV
                             </button>
                         </div>
                     </div>
@@ -671,79 +798,72 @@ const StationaryAdmin = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-900 text-white text-xs uppercase tracking-wider">
+                                <tr className="bg-emerald-950 text-white text-xs uppercase tracking-wider">
                                     <th className="p-3 rounded-tl-xl text-center">Sr. No.</th>
-                                    <th className="p-3">Date & Time</th>
-                                    <th className="p-3">Item Name</th>
-                                    <th className="p-3 text-center">Type</th>
-                                    <th className="p-3 text-right">Received Qty (+)</th>
-                                    <th className="p-3 text-right">Issued Qty (-)</th>
-                                    <th className="p-3 text-right font-black">Balance Stock</th>
-                                    <th className="p-3">Ref / Bill No / User</th>
+                                    <th className="p-3">Purchase Date & Time</th>
+                                    <th className="p-3">Bill / Invoice No.</th>
+                                    <th className="p-3">Item & Category</th>
+                                    <th className="p-3 text-right">Purchased Qty (+)</th>
+                                    <th className="p-3 text-right font-black">Stock Balance</th>
+                                    <th className="p-3">Added By / Notes</th>
                                     <th className="p-3 rounded-tr-xl text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
-                                {filteredLedger.map((row) => (
-                                    <tr key={row.id} className="hover:bg-slate-50 transition">
-                                        <td className="p-3 text-center font-bold text-slate-400 text-xs">
-                                            #{row.sr_no}
-                                        </td>
-                                        <td className="p-3 text-xs text-slate-600">
-                                            <div className="font-semibold text-slate-800">{new Date(row.date).toLocaleDateString()}</div>
-                                            <div className="text-slate-400">{new Date(row.date).toLocaleTimeString()}</div>
-                                        </td>
-                                        <td className="p-3">
-                                            <div className="font-bold text-slate-800">{row.item_name}</div>
-                                            <div className="text-xs text-slate-400 uppercase font-medium">{row.category}</div>
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
-                                                row.transaction_type === 'RECEIVED' ? 'bg-emerald-100 text-emerald-800' :
-                                                row.transaction_type === 'ISSUED' ? 'bg-indigo-100 text-indigo-800' :
-                                                row.transaction_type === 'RETURNED' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-slate-100 text-slate-700'
-                                            }`}>
-                                                {row.transaction_type}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-right font-bold text-emerald-600">
-                                            {row.received_qty > 0 ? `+${row.received_qty} ${row.unit}` : '-'}
-                                        </td>
-                                        <td className="p-3 text-right font-bold text-rose-600">
-                                            {row.issued_qty > 0 ? `-${row.issued_qty} ${row.unit}` : '-'}
-                                        </td>
-                                        <td className="p-3 text-right font-black text-indigo-700 text-base bg-indigo-50/50">
-                                            {row.balance} <span className="text-xs font-normal text-slate-500">{row.unit}</span>
-                                        </td>
-                                        <td className="p-3 text-xs">
-                                            <div className="font-semibold text-slate-700">{row.reference_no}</div>
-                                            <div className="text-slate-400">{row.user_name}</div>
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                <button
-                                                    onClick={() => setEditingLedger(row)}
-                                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                                    title="Edit Ledger Entry"
-                                                >
-                                                    <RiPencilLine size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteLedger(row.id)}
-                                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                                    title="Delete Ledger Entry"
-                                                >
-                                                    <RiDeleteBinLine size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredLedger.length === 0 && (
+                                {filteredLedger
+                                    .filter(row => row.transaction_type === 'RECEIVED' || row.transaction_type === 'RESTOCK')
+                                    .map((row, idx) => (
+                                        <tr key={row.id} className="hover:bg-slate-50 transition">
+                                            <td className="p-3 text-center font-bold text-slate-400 text-xs">
+                                                #{idx + 1}
+                                            </td>
+                                            <td className="p-3 text-xs text-slate-600">
+                                                <div className="font-semibold text-slate-800">{new Date(row.date).toLocaleDateString()}</div>
+                                                <div className="text-slate-400 font-mono">{new Date(row.date).toLocaleTimeString()}</div>
+                                            </td>
+                                            <td className="p-3">
+                                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-mono font-bold rounded-lg text-xs">
+                                                    {row.reference_no || 'NO-BILL'}
+                                                </span>
+                                            </td>
+                                            <td className="p-3">
+                                                <div className="font-bold text-slate-800">{row.item_name}</div>
+                                                <div className="text-xs text-slate-400 uppercase font-medium">{row.category}</div>
+                                            </td>
+                                            <td className="p-3 text-right font-bold text-emerald-600 text-base">
+                                                +{row.received_qty} {row.unit}
+                                            </td>
+                                            <td className="p-3 text-right font-black text-slate-800 text-base bg-slate-50">
+                                                {row.balance} <span className="text-xs font-normal text-slate-500">{row.unit}</span>
+                                            </td>
+                                            <td className="p-3 text-xs text-slate-600">
+                                                <div className="font-semibold text-slate-800">{row.user_name || 'Admin'}</div>
+                                                <div className="text-slate-400 max-w-xs truncate">{row.notes}</div>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button
+                                                        onClick={() => setEditingLedger(row)}
+                                                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                        title="Edit Purchase Entry"
+                                                    >
+                                                        <RiPencilLine size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteLedger(row.id)}
+                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                        title="Delete Purchase Entry"
+                                                    >
+                                                        <RiDeleteBinLine size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                {filteredLedger.filter(row => row.transaction_type === 'RECEIVED' || row.transaction_type === 'RESTOCK').length === 0 && (
                                     <tr>
-                                        <td colSpan="9" className="p-8 text-center text-slate-400">
-                                            No stock movement entries recorded yet.
+                                        <td colSpan="8" className="p-8 text-center text-slate-400">
+                                            No purchase or restock entries recorded yet.
                                         </td>
                                     </tr>
                                 )}
