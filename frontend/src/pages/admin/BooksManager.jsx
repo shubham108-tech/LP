@@ -107,7 +107,7 @@ const BooksManager = () => {
     };
 
     const uploadFileInChunks = async (file, fileType, toastId) => {
-        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (well under Vercel 4.5MB limit)
+        const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB chunks (well under Vercel 4.5MB payload limit)
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const uploadId = Date.now() + '_' + Math.random().toString(36).substring(2, 8);
         let finalPath = '';
@@ -149,8 +149,8 @@ const BooksManager = () => {
             let uploadedImagePath = null;
             let uploadedPdfPath = null;
 
-            // Files larger than 2.5MB use chunked upload to bypass Vercel 4.5MB payload limit
-            const MAX_DIRECT_SIZE = 2.5 * 1024 * 1024;
+            // Files larger than 1MB use chunked upload to bypass Vercel 4.5MB payload limit
+            const MAX_DIRECT_SIZE = 1 * 1024 * 1024;
 
             if (imageFile && imageFile.size > MAX_DIRECT_SIZE) {
                 uploadedImagePath = await uploadFileInChunks(imageFile, 'image', toastId);
@@ -199,7 +199,7 @@ const BooksManager = () => {
         } catch (error) {
             let msg = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === 'string' ? error.response.data : error.message) || 'Operation failed';
             if (error.response?.status === 413) {
-                msg = 'File too large for single upload (Vercel Payload Limit).';
+                msg = 'File too large for direct upload. Try a smaller file or use chunked upload.';
             }
             toast.error(msg, { id: toastId });
         }
@@ -220,7 +220,7 @@ const BooksManager = () => {
         const toastId = toast.loading('Parsing file...');
         try {
             let serverFilePath = null;
-            if (uploadFile.size > 2.5 * 1024 * 1024) {
+            if (uploadFile.size > 1 * 1024 * 1024) {
                 serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
             }
 
@@ -244,7 +244,7 @@ const BooksManager = () => {
         const toastId = toast.loading('Saving books...');
         try {
             let serverFilePath = null;
-            if (uploadFile.size > 2.5 * 1024 * 1024) {
+            if (uploadFile.size > 1 * 1024 * 1024) {
                 serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
             }
 
