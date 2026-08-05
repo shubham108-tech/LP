@@ -149,8 +149,8 @@ const BooksManager = () => {
             let uploadedImagePath = null;
             let uploadedPdfPath = null;
 
-            // Files larger than 1MB use chunked upload to bypass Vercel 4.5MB payload limit
-            const MAX_DIRECT_SIZE = 1 * 1024 * 1024;
+            // Direct upload files up to 3.5MB (below Vercel 4.5MB single-request limit)
+            const MAX_DIRECT_SIZE = 3.5 * 1024 * 1024;
 
             if (imageFile && imageFile.size > MAX_DIRECT_SIZE) {
                 uploadedImagePath = await uploadFileInChunks(imageFile, 'image', toastId);
@@ -220,7 +220,7 @@ const BooksManager = () => {
         const toastId = toast.loading('Parsing file...');
         try {
             let serverFilePath = null;
-            if (uploadFile.size > 1 * 1024 * 1024) {
+            if (uploadFile.size > 3.5 * 1024 * 1024) {
                 serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
             }
 
@@ -244,7 +244,7 @@ const BooksManager = () => {
         const toastId = toast.loading('Saving books...');
         try {
             let serverFilePath = null;
-            if (uploadFile.size > 1 * 1024 * 1024) {
+            if (uploadFile.size > 3.5 * 1024 * 1024) {
                 serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
             }
 

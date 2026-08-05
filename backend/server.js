@@ -87,8 +87,9 @@ app.get(['/reset', '/api/reset', '/api/clean-reset'], async (req, res) => {
 
 const { authenticateToken } = require('./middleware/authMiddleware');
 
+const uploadsPath = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 app.use('/uploads', (req, res, next) => {
-    const ext = path.extname(req.path).toLowerCase(); // ⚡ changed require('path') to path
+    const ext = path.extname(req.path).toLowerCase();
     const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
     if (imageExts.includes(ext)) {
@@ -96,7 +97,7 @@ app.use('/uploads', (req, res, next) => {
     }
 
     authenticateToken(req, res, next);
-}, express.static('uploads'));
+}, express.static(uploadsPath), express.static(path.join(__dirname, 'uploads')));
 
 const rateLimit = require('express-rate-limit');
 
