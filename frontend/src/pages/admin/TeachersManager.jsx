@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import {
     RiAddLine, RiUploadCloud2Line, RiSearchLine, RiPencilLine,
     RiDeleteBinLine, RiHistoryLine, RiUserStarLine, RiCloseLine,
-    RiShieldUserLine, RiCheckDoubleLine
+    RiShieldUserLine, RiCheckDoubleLine, RiWhatsappLine, RiFileCopyLine
 } from 'react-icons/ri';
 
 const TeachersManager = () => {
@@ -21,6 +21,7 @@ const TeachersManager = () => {
     const [showFormModal, setShowFormModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [createdUser, setCreatedUser] = useState(null);
 
     // Selection
     const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -98,6 +99,13 @@ const TeachersManager = () => {
             });
 
             toast.success(`${formData.role.toUpperCase()} added successfully`);
+            setCreatedUser({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                role: formData.role,
+                branch: formData.branch
+            });
             setFormData({ name: '', email: '', password: '', role: viewRole, branch: '' });
             setProfileImage(null);
             setShowFormModal(false);
@@ -498,6 +506,80 @@ const TeachersManager = () => {
                         </div>
                         <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
                             <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 bg-white border border-gray-300 text-slate-600 rounded-lg hover:bg-gray-50 text-sm font-medium">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* CREATED CREDENTIALS SHARE MODAL */}
+            {createdUser && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 bg-emerald-600 text-white flex justify-between items-center">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <RiCheckDoubleLine size={22} /> Account Created Successfully
+                            </h2>
+                            <button onClick={() => setCreatedUser(null)} className="p-1 hover:bg-emerald-700 rounded-full transition">
+                                <RiCloseLine size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-slate-600">
+                                Send these login credentials to <strong>{createdUser.name}</strong>:
+                            </p>
+
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 font-mono text-sm">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500 text-xs uppercase font-bold">Email:</span>
+                                    <span className="font-bold text-slate-800">{createdUser.email}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500 text-xs uppercase font-bold">Password:</span>
+                                    <span className="font-bold text-slate-800 bg-white px-2 py-1 rounded border border-gray-200">{createdUser.password}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500 text-xs uppercase font-bold">Role:</span>
+                                    <span className="font-bold text-indigo-600 uppercase text-xs">{createdUser.role}</span>
+                                </div>
+                                {createdUser.branch && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500 text-xs uppercase font-bold">Branch:</span>
+                                        <span className="font-bold text-slate-700 text-xs">{createdUser.branch}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-2 pt-2">
+                                <a
+                                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                                        `🎓 *LibraryPro Account Credentials*\n\nHello *${createdUser.name}*,\nYour ${createdUser.role.toUpperCase()} account has been created!\n\n📧 *Email:* ${createdUser.email}\n🔑 *Password:* ${createdUser.password}\n🌐 *Login Portal:* https://lp-wheat-nu.vercel.app/login`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition shadow-md shadow-emerald-500/20 text-sm"
+                                >
+                                    <RiWhatsappLine size={20} /> Share via WhatsApp
+                                </a>
+
+                                <button
+                                    onClick={() => {
+                                        const text = `LibraryPro Login Credentials:\nName: ${createdUser.name}\nEmail: ${createdUser.email}\nPassword: ${createdUser.password}\nRole: ${createdUser.role}\nLogin URL: https://lp-wheat-nu.vercel.app/login`;
+                                        navigator.clipboard.writeText(text);
+                                        toast.success('Credentials copied to clipboard!');
+                                    }}
+                                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl flex items-center justify-center gap-2 transition text-sm"
+                                >
+                                    <RiFileCopyLine size={20} /> Copy Credentials
+                                </button>
+                            </div>
+
+                            <div className="pt-2 text-center">
+                                <button
+                                    onClick={() => setCreatedUser(null)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 underline font-medium"
+                                >
+                                    Done / Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -554,6 +554,28 @@ exports.createUser = async (req, res) => {
             [name, cleanEmail, hashedPassword, userRole, branch || null, year || null, division || null, profileImage]
         );
 
+        // Send welcome email with credentials in background if SMTP configured
+        try {
+            const { sendEmail } = require('../utils/email');
+            const loginUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/login` : 'https://lp-wheat-nu.vercel.app/login';
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #e5e7eb; border-radius: 12px;">
+                    <h2 style="color: #4f46e5; margin-top: 0;">Welcome to LibraryPro</h2>
+                    <p>Hello <strong>${name}</strong>,</p>
+                    <p>Your <strong>${userRole.toUpperCase()}</strong> account has been created by the administrator. Here are your login details:</p>
+                    <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p style="margin: 5px 0;"><strong>Email:</strong> ${cleanEmail}</p>
+                        <p style="margin: 5px 0;"><strong>Password:</strong> ${password}</p>
+                        <p style="margin: 5px 0;"><strong>Role:</strong> ${userRole}</p>
+                    </div>
+                    <p><a href="${loginUrl}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Login to LibraryPro</a></p>
+                </div>
+            `;
+            sendEmail(cleanEmail, `Your LibraryPro Account Credentials`, emailHtml).catch(e => console.log('Email send error:', e.message));
+        } catch (emailErr) {
+            console.log('Email helper skipped:', emailErr.message);
+        }
+
         res.status(201).json({
             message: `${userRole.toUpperCase()} created successfully`,
             userId: result.insertId
