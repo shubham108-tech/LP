@@ -116,6 +116,8 @@ const StationaryAdmin = () => {
             await api.put(`/stationary/items/${editingItem.id}`, {
                 item_name: editingItem.item_name,
                 category: editingItem.category,
+                total_stock: Number(editingItem.total_stock),
+                available_stock: Number(editingItem.available_stock),
                 min_stock_limit: Number(editingItem.min_stock_limit),
                 unit: editingItem.unit,
                 bill_number: editingItem.bill_number
@@ -764,26 +766,40 @@ const StationaryAdmin = () => {
                                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Item Name</label>
                                 <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.item_name} onChange={e => setEditingItem({ ...editingItem, item_name: e.target.value })} required />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
-                                <select className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.category} onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}>
-                                    <option value="Consumable">Consumable</option>
-                                    <option value="Returnable">Returnable</option>
-                                </select>
-                            </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Alert Limit</label>
-                                    <input type="number" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.min_stock_limit} onChange={e => setEditingItem({ ...editingItem, min_stock_limit: e.target.value })} required />
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
+                                    <select className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.category} onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}>
+                                        <option value="Consumable">Consumable</option>
+                                        <option value="Returnable">Returnable</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Unit</label>
                                     <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.unit} onChange={e => setEditingItem({ ...editingItem, unit: e.target.value })} required />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bill Number</label>
-                                <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.bill_number || ''} onChange={e => setEditingItem({ ...editingItem, bill_number: e.target.value })} />
+
+                            <div className="grid grid-cols-2 gap-3 bg-indigo-50/60 p-3 rounded-xl border border-indigo-100">
+                                <div>
+                                    <label className="block text-xs font-bold text-indigo-900 uppercase mb-1">Available Pcs / Qty</label>
+                                    <input type="number" className="w-full border border-indigo-200 rounded-xl p-2.5 text-sm font-bold text-indigo-700 bg-white focus:ring-2 focus:ring-indigo-500" value={editingItem.available_stock} onChange={e => setEditingItem({ ...editingItem, available_stock: e.target.value })} required min="0" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Total Stock (Pcs)</label>
+                                    <input type="number" className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 bg-white focus:ring-2 focus:ring-indigo-500" value={editingItem.total_stock} onChange={e => setEditingItem({ ...editingItem, total_stock: e.target.value })} required min="0" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Alert Limit</label>
+                                    <input type="number" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.min_stock_limit} onChange={e => setEditingItem({ ...editingItem, min_stock_limit: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bill Number</label>
+                                    <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingItem.bill_number || ''} onChange={e => setEditingItem({ ...editingItem, bill_number: e.target.value })} />
+                                </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>

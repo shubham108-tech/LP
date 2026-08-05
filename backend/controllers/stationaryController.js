@@ -107,7 +107,7 @@ exports.addItem = async (req, res) => {
 // Update item (e.g., adding stock)
 exports.updateItem = async (req, res) => {
     const { id } = req.params;
-    const { item_name, category, min_stock_limit, unit, add_stock, bill_number } = req.body;
+    const { item_name, category, min_stock_limit, unit, add_stock, total_stock, available_stock, bill_number } = req.body;
     const user_id = req.user?.id || null;
 
     try {
@@ -120,14 +120,18 @@ exports.updateItem = async (req, res) => {
         let currentTotal = existing.total_stock;
         let currentAvailable = existing.available_stock;
 
+        if (total_stock !== undefined && !isNaN(total_stock)) {
+            currentTotal = parseInt(total_stock);
+        }
+        if (available_stock !== undefined && !isNaN(available_stock)) {
+            currentAvailable = parseInt(available_stock);
+        }
+
         const updateName = item_name !== undefined ? item_name : existing.item_name;
         const updateCategory = category !== undefined ? category : existing.category;
         const updateMinLimit = min_stock_limit !== undefined ? min_stock_limit : existing.min_stock_limit;
         const updateUnit = unit !== undefined ? unit : existing.unit;
         const updateBillNumber = bill_number !== undefined ? bill_number : existing.bill_number;
-
-        let queryParams = [updateName, updateCategory, updateMinLimit, updateUnit, updateBillNumber];
-        let queryStr = 'UPDATE stationary_items SET item_name = ?, category = ?, min_stock_limit = ?, unit = ?, bill_number = ?';
 
         const extraStock = (add_stock !== undefined && !isNaN(add_stock)) ? parseInt(add_stock) : 0;
 
@@ -136,12 +140,12 @@ exports.updateItem = async (req, res) => {
             currentAvailable += extraStock;
         }
 
-        queryStr += ', total_stock = ?, available_stock = ? WHERE id = ?';
-        queryParams.push(currentTotal, currentAvailable, id);
+        let queryParams = [updateName, updateCategory, updateMinLimit, updateUnit, updateBillNumber, currentTotal, currentAvailable, id];
+        let queryStr = 'UPDATE stationary_items SET item_name = ?, category = ?, min_stock_limit = ?, unit = ?, bill_number = ?, total_stock = ?, available_stock = ? WHERE id = ?';
 
         await db.query(queryStr, queryParams);
 
-        // Record stock ledger entry if stock was added
+        // Record stock ledger entry if stock was added or adjusted
         if (extraStock > 0) {
             const prevBalance = existing.available_stock;
             const newBalance = currentAvailable;
@@ -152,6 +156,18 @@ exports.updateItem = async (req, res) => {
                 (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
                 VALUES (?, 'RECEIVED', ?, 0, ?, ?, ?, ?, 'Stock Added / Restocked')`,
                 [id, extraStock, prevBalance, newBalance, refNo, user_id]
+            );
+        } else if (available_stock !== undefined && parseInt(available_stock) !== existing.available_stock) {
+            const diff = parseInt(available_stock) - existing.available_stock;
+            const transType = diff > 0 ? 'RECEIVED' : 'ISSUED';
+            const recQty = diff > 0 ? diff : 0;
+            const issQty = diff < 0 ? Math.abs(diff) : 0;
+
+            await db.query(
+                `INSERT INTO stationary_ledger 
+                (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Stock Quantity Manually Adjusted by Admin')`,
+                [id, transType, recQty, issQty, existing.available_stock, parseInt(available_stock), updateBillNumber || existing.bill_number || `ADJUST-#${id}`, user_id]
             );
         }
 
