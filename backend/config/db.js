@@ -142,8 +142,12 @@ async function initPgSchema() {
                 user_id INT NOT NULL,
                 book_id INT NOT NULL,
                 status VARCHAR(50) DEFAULT 'pending',
+                reason TEXT,
+                reference_link TEXT,
                 request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE book_requests ADD COLUMN IF NOT EXISTS reason TEXT;
+            ALTER TABLE book_requests ADD COLUMN IF NOT EXISTS reference_link TEXT;
 
             CREATE TABLE IF NOT EXISTS notes (
                 id SERIAL PRIMARY KEY,
