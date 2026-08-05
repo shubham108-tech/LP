@@ -43,5 +43,7 @@ const authorize = (roles = []) => {
     };
 };
 
-module.exports = { authenticateToken, protect, isAdmin, authorize };
+const authorizeRoles = authorize;
+
+module.exports = { authenticateToken, protect, isAdmin, authorize, authorizeRoles };
 
