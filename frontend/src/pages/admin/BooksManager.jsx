@@ -106,40 +106,102 @@ const BooksManager = () => {
         }
     };
 
+    const uploadFileInChunks = async (file, fileType, toastId) => {
+        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (well under Vercel 4.5MB limit)
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const uploadId = Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+        let finalPath = '';
+
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(file.size, start + CHUNK_SIZE);
+            const chunk = file.slice(start, end);
+
+            const chunkData = new FormData();
+            chunkData.append('chunk', chunk);
+            chunkData.append('uploadId', uploadId);
+            chunkData.append('chunkIndex', i);
+            chunkData.append('totalChunks', totalChunks);
+            chunkData.append('filename', file.name);
+            chunkData.append('fileType', fileType);
+
+            if (toastId) {
+                const percent = Math.round(((i + 1) / totalChunks) * 100);
+                toast.loading(`Uploading ${fileType.toUpperCase()} (${percent}%)...`, { id: toastId });
+            }
+
+            const res = await api.post('/books/upload-chunk', chunkData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data.completed) {
+                finalPath = res.data.filePath;
+            }
+        }
+        return finalPath;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const data = new FormData();
-        data.append('book_name', formData.book_name);
-        data.append('author', formData.author);
-        data.append('category', formData.category);
-        data.append('total_quantity', formData.total_quantity);
-
-        // Calculate available quantity intelligently
-        let finalAvailable;
-        if (editingId) {
-            const diff = parseInt(formData.total_quantity) - parseInt(formData._initial_total);
-            finalAvailable = parseInt(formData._initial_available) + diff;
-            if (finalAvailable < 0) finalAvailable = 0; // Prevent negative stock
-        } else {
-            finalAvailable = formData.total_quantity;
-        }
-        data.append('available_quantity', finalAvailable);
-
-        if (imageFile) data.append('image', imageFile);
-        if (pdfFile) data.append('pdf', pdfFile);
+        const toastId = toast.loading(editingId ? 'Updating book...' : 'Adding book...');
 
         try {
+            let uploadedImagePath = null;
+            let uploadedPdfPath = null;
+
+            // Files larger than 2.5MB use chunked upload to bypass Vercel 4.5MB payload limit
+            const MAX_DIRECT_SIZE = 2.5 * 1024 * 1024;
+
+            if (imageFile && imageFile.size > MAX_DIRECT_SIZE) {
+                uploadedImagePath = await uploadFileInChunks(imageFile, 'image', toastId);
+            }
+            if (pdfFile && pdfFile.size > MAX_DIRECT_SIZE) {
+                uploadedPdfPath = await uploadFileInChunks(pdfFile, 'pdf', toastId);
+            }
+
+            const data = new FormData();
+            data.append('book_name', formData.book_name);
+            data.append('author', formData.author);
+            data.append('category', formData.category);
+            data.append('total_quantity', formData.total_quantity);
+
+            let finalAvailable;
+            if (editingId) {
+                const diff = parseInt(formData.total_quantity) - parseInt(formData._initial_total);
+                finalAvailable = parseInt(formData._initial_available) + diff;
+                if (finalAvailable < 0) finalAvailable = 0;
+            } else {
+                finalAvailable = formData.total_quantity;
+            }
+            data.append('available_quantity', finalAvailable);
+
+            if (uploadedImagePath) {
+                data.append('uploaded_image_url', uploadedImagePath);
+            } else if (imageFile) {
+                data.append('image', imageFile);
+            }
+
+            if (uploadedPdfPath) {
+                data.append('uploaded_pdf_url', uploadedPdfPath);
+            } else if (pdfFile) {
+                data.append('pdf', pdfFile);
+            }
+
             if (editingId) {
                 await api.put(`/books/${editingId}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
-                toast.success('Book updated');
+                toast.success('Book updated', { id: toastId });
             } else {
                 await api.post('/books', data, { headers: { 'Content-Type': 'multipart/form-data' } });
-                toast.success('Book added');
+                toast.success('Book added', { id: toastId });
             }
             fetchBooks();
             closeFormModal();
         } catch (error) {
-            toast.error('Operation failed');
+            let msg = error.response?.data?.message || error.message || 'Operation failed';
+            if (error.response?.status === 413) {
+                msg = 'File too large for single upload (Vercel Limit). Retrying with Chunked Upload...';
+            }
+            toast.error(msg, { id: toastId });
         }
     };
 
@@ -155,10 +217,20 @@ const BooksManager = () => {
 
     const handlePreviewUpload = async () => {
         if (!uploadFile) return;
-        const data = new FormData();
-        data.append('file', uploadFile);
         const toastId = toast.loading('Parsing file...');
         try {
+            let serverFilePath = null;
+            if (uploadFile.size > 2.5 * 1024 * 1024) {
+                serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
+            }
+
+            const data = new FormData();
+            if (serverFilePath) {
+                data.append('serverFilePath', serverFilePath);
+            } else {
+                data.append('file', uploadFile);
+            }
+
             const res = await api.post('/books/bulk-preview', data, { headers: { 'Content-Type': 'multipart/form-data' } });
             toast.success(`Found ${res.data.count} books.`, { id: toastId });
             setPreviewData(res.data.data);
@@ -169,10 +241,20 @@ const BooksManager = () => {
 
     const confirmImport = async () => {
         if (!uploadFile) return;
-        const data = new FormData();
-        data.append('file', uploadFile);
         const toastId = toast.loading('Saving books...');
         try {
+            let serverFilePath = null;
+            if (uploadFile.size > 2.5 * 1024 * 1024) {
+                serverFilePath = await uploadFileInChunks(uploadFile, 'bulk', toastId);
+            }
+
+            const data = new FormData();
+            if (serverFilePath) {
+                data.append('serverFilePath', serverFilePath);
+            } else {
+                data.append('file', uploadFile);
+            }
+
             const res = await api.post('/books/bulk-upload', data, { headers: { 'Content-Type': 'multipart/form-data' } });
             toast.success(res.data.message, { id: toastId });
             setShowImportModal(false);
@@ -180,7 +262,7 @@ const BooksManager = () => {
             setUploadFile(null);
             fetchBooks();
         } catch (err) {
-            toast.error('Upload failed', { id: toastId });
+            toast.error(err.response?.data?.message || 'Upload failed', { id: toastId });
         }
     };
 
@@ -481,7 +563,7 @@ const BooksManager = () => {
                                 </div>
 
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                                    <p className="text-xs font-bold text-gray-500 uppercase mb-3">Attachments</p>
+                                    <p className="text-xs font-bold text-gray-500 uppercase mb-3">Attachments (Max 50MB)</p>
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm w-20">Cover Img:</span>
@@ -521,7 +603,7 @@ const BooksManager = () => {
                                     <div className="pointer-events-none">
                                         <RiUploadCloud2Line className="mx-auto text-4xl text-gray-400 mb-2" />
                                         <p className="font-medium text-slate-600">{uploadFile ? uploadFile.name : 'Click to upload Excel, CSV or PDF'}</p>
-                                        <p className="text-xs text-slate-400 mt-1">Supported formats: .xlsx, .csv, .ods, .pdf</p>
+                                        <p className="text-xs text-slate-400 mt-1">Supported formats: .xlsx, .csv, .ods, .pdf (Max 50MB)</p>
                                     </div>
                                 </div>
                             ) : (

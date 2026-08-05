@@ -13,17 +13,23 @@ exports.addBook = async (req, res) => {
     const { book_name, author, category, total_quantity } = req.body;
 
     if (!book_name || !author || !total_quantity) {
-        return res.status(400).json({ message: 'Missing fields' });
+        return res.status(400).json({ message: 'Missing required fields (Book Title, Author, or Quantity)' });
     }
 
     const available_quantity = total_quantity;
 
-    let image_url = null;
-    let pdf_url = null;
+    let image_url = req.body.uploaded_image_url || null;
+    let pdf_url = req.body.uploaded_pdf_url || null;
 
     if (req.files) {
-        if (req.files['image']) image_url = req.files['image'][0].path.replace(/\\/g, '/');
-        if (req.files['pdf']) pdf_url = req.files['pdf'][0].path.replace(/\\/g, '/');
+        if (req.files['image'] && req.files['image'][0]) {
+            const p = req.files['image'][0].path.replace(/\\/g, '/');
+            image_url = p.includes('uploads/') ? 'uploads/' + p.split('uploads/').pop() : p;
+        }
+        if (req.files['pdf'] && req.files['pdf'][0]) {
+            const p = req.files['pdf'][0].path.replace(/\\/g, '/');
+            pdf_url = p.includes('uploads/') ? 'uploads/' + p.split('uploads/').pop() : p;
+        }
     }
 
     try {
@@ -31,9 +37,10 @@ exports.addBook = async (req, res) => {
             'INSERT INTO books (book_name, author, category, total_quantity, available_quantity, image_url, pdf_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [book_name, author, category || 'General', total_quantity, available_quantity, image_url, pdf_url]
         );
-        res.status(201).json({ message: 'Book added', bookId: result.insertId });
+        res.status(201).json({ message: 'Book added successfully', bookId: result.insertId });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('addBook Error:', error);
+        res.status(500).json({ message: error.message || 'Server error', error: error.message });
     }
 };
 
@@ -41,18 +48,21 @@ exports.updateBook = async (req, res) => {
     const { id } = req.params;
     const { book_name, author, category, total_quantity, available_quantity } = req.body;
 
-    // Fetch existing book to preserve old files if not replaced
-    let image_url = null; // Default null means "don't update" or "remove"? No, usually preserve.
-    let pdf_url = null;
+    let image_url = req.body.uploaded_image_url || null;
+    let pdf_url = req.body.uploaded_pdf_url || null;
 
-    // Check if new files uploaded
     if (req.files) {
-        if (req.files['image']) image_url = req.files['image'][0].path.replace(/\\/g, '/');
-        if (req.files['pdf']) pdf_url = req.files['pdf'][0].path.replace(/\\/g, '/');
+        if (req.files['image'] && req.files['image'][0]) {
+            const p = req.files['image'][0].path.replace(/\\/g, '/');
+            image_url = p.includes('uploads/') ? 'uploads/' + p.split('uploads/').pop() : p;
+        }
+        if (req.files['pdf'] && req.files['pdf'][0]) {
+            const p = req.files['pdf'][0].path.replace(/\\/g, '/');
+            pdf_url = p.includes('uploads/') ? 'uploads/' + p.split('uploads/').pop() : p;
+        }
     }
 
     try {
-        // Build dynamic query
         let query = 'UPDATE books SET book_name = ?, author = ?, category = ?, total_quantity = ?, available_quantity = ?';
         const params = [book_name, author, category || 'General', total_quantity, available_quantity];
 
@@ -69,9 +79,10 @@ exports.updateBook = async (req, res) => {
         params.push(id);
 
         await db.query(query, params);
-        res.json({ message: 'Book updated' });
+        res.json({ message: 'Book updated successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('updateBook Error:', error);
+        res.status(500).json({ message: error.message || 'Server error', error: error.message });
     }
 };
 
@@ -213,10 +224,79 @@ const parseBookFile = async (buffer, originalName) => {
     return data;
 };
 
+const getFileBufferAndName = (req) => {
+    const fs = require('fs');
+    const path = require('path');
+    if (req.body.serverFilePath) {
+        const relativePath = req.body.serverFilePath;
+        const uploadDir = process.env.VERCEL
+            ? path.join('/tmp', relativePath)
+            : path.join(__dirname, '..', relativePath);
+        return {
+            buffer: fs.readFileSync(uploadDir),
+            originalName: path.basename(relativePath)
+        };
+    } else if (req.file) {
+        return {
+            buffer: req.file.buffer,
+            originalName: req.file.originalname
+        };
+    } else {
+        throw new Error('No file uploaded');
+    }
+};
+
+exports.uploadChunk = async (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No chunk uploaded' });
+
+        const { uploadId, chunkIndex, totalChunks, filename, fileType } = req.body;
+        if (!uploadId || chunkIndex === undefined || !totalChunks) {
+            return res.status(400).json({ message: 'Missing chunk metadata' });
+        }
+
+        const idx = parseInt(chunkIndex);
+        const total = parseInt(totalChunks);
+
+        const uploadDir = process.env.VERCEL
+            ? path.join('/tmp', 'uploads')
+            : path.join(__dirname, '../uploads');
+        const tempDir = path.join(uploadDir, 'temp');
+
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const ext = path.extname(filename || 'file').toLowerCase();
+        const tempFilePath = path.join(tempDir, `chunk_${uploadId}${ext}`);
+
+        fs.appendFileSync(tempFilePath, req.file.buffer);
+
+        if (idx + 1 === total) {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const prefix = fileType || 'file';
+            const finalFilename = `${prefix}-${uniqueSuffix}${ext}`;
+            const finalFilePath = path.join(uploadDir, finalFilename);
+
+            fs.renameSync(tempFilePath, finalFilePath);
+
+            const relativePath = `uploads/${finalFilename}`;
+            return res.json({ completed: true, filePath: relativePath });
+        }
+
+        return res.json({ completed: false, receivedChunk: idx });
+    } catch (error) {
+        console.error('uploadChunk Error:', error);
+        res.status(500).json({ message: 'Chunk upload failed: ' + error.message });
+    }
+};
+
 exports.previewBulkUpload = async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-        const data = await parseBookFile(req.file.buffer, req.file.originalname);
+        const { buffer, originalName } = getFileBufferAndName(req);
+        const data = await parseBookFile(buffer, originalName);
         res.json({ success: true, count: data.length, data: data.slice(0, 50) }); // Preview first 50
     } catch (error) {
         res.status(500).json({ message: 'Error parsing file: ' + error.message });
@@ -225,9 +305,8 @@ exports.previewBulkUpload = async (req, res) => {
 
 exports.bulkUploadBooks = async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-
-        const data = await parseBookFile(req.file.buffer, req.file.originalname);
+        const { buffer, originalName } = getFileBufferAndName(req);
+        const data = await parseBookFile(buffer, originalName);
         let addedCount = 0;
         let mergedCount = 0;
 

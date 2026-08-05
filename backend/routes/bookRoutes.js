@@ -7,6 +7,7 @@ const multer = require('multer');
 const diskUpload = require('../middleware/uploadMiddleware'); // For images
 const memoryUpload = multer({
     storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
     fileFilter: (req, file, cb) => {
         const ext = require('path').extname(file.originalname).toLowerCase();
         if ((file.mimetype === 'application/pdf' && ext === '.pdf') ||
@@ -27,6 +28,7 @@ const memoryUpload = multer({
 // 14. router.put('/:id', authenticateToken, isAdmin, diskUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), updateBook);
 
 router.get('/', authenticateToken, getAllBooks);
+router.post('/upload-chunk', authenticateToken, isAdmin, memoryUpload.single('chunk'), require('../controllers/bookController').uploadChunk);
 router.post('/', authenticateToken, isAdmin, diskUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), addBook);
 router.post('/bulk-upload', authenticateToken, isAdmin, memoryUpload.single('file'), require('../controllers/bookController').bulkUploadBooks);
 router.post('/bulk-preview', authenticateToken, isAdmin, memoryUpload.single('file'), require('../controllers/bookController').previewBulkUpload);

@@ -4,9 +4,18 @@ const controller = require('../controllers/engineeringController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const multer = require('multer');
 
+const fs = require('fs');
+const path = require('path');
+const uploadDir = path.join(__dirname, '../uploads');
+
 // Multer config
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
+    destination: (req, file, cb) => {
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
     filename: (req, file, cb) => cb(null, `eng-${Date.now()}-${file.originalname.replace(/\s/g, '_')}`)
 });
 const fileFilter = (req, file, cb) => {

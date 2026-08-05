@@ -413,7 +413,10 @@ const dbWrapper = {
                 newItem.book_name = params[0] || 'Book';
                 newItem.author = params[1] || 'Author';
                 newItem.category = params[2] || 'General';
-                newItem.total_quantity = params[3] || 1;
+                newItem.total_quantity = parseInt(params[3]) || 1;
+                newItem.available_quantity = params[4] !== undefined ? parseInt(params[4]) : newItem.total_quantity;
+                newItem.image_url = params[5] || null;
+                newItem.pdf_url = params[6] || null;
             } else {
                 newItem.params = params;
             }
@@ -424,7 +427,27 @@ const dbWrapper = {
             return [{ insertId: newId, affectedRows: 1 }, []];
         }
 
-        if (sqlUpper.startsWith('UPDATE') || sqlUpper.startsWith('DELETE')) {
+        if (sqlUpper.startsWith('UPDATE')) {
+            if (sqlUpper.includes('UPDATE BOOKS') && params.length > 0) {
+                const bookId = Number(params[params.length - 1]);
+                const idx = dbData.books.findIndex(b => b.id === bookId);
+                if (idx !== -1) {
+                    if (params[0]) dbData.books[idx].book_name = params[0];
+                    if (params[1]) dbData.books[idx].author = params[1];
+                    if (params[2]) dbData.books[idx].category = params[2];
+                    if (params[3]) dbData.books[idx].total_quantity = parseInt(params[3]);
+                    if (params[4] !== undefined) dbData.books[idx].available_quantity = parseInt(params[4]);
+                }
+            }
+            savePureJsData();
+            return [{ insertId: 0, affectedRows: 1 }, []];
+        }
+
+        if (sqlUpper.startsWith('DELETE')) {
+            if (sqlUpper.includes('FROM BOOKS WHERE ID = ?') && params.length > 0) {
+                const bookId = Number(params[0]);
+                dbData.books = dbData.books.filter(b => b.id !== bookId);
+            }
             savePureJsData();
             return [{ insertId: 0, affectedRows: 1 }, []];
         }
