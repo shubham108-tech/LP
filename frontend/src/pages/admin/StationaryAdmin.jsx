@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import { 
     RiAddLine, RiCheckLine, RiCloseLine, RiArchiveLine, RiRefreshLine, 
     RiDownloadLine, RiFileExcel2Line, RiBarChartBoxLine, RiSearchLine,
@@ -15,6 +16,9 @@ import {
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 const StationaryAdmin = () => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
+
     const [items, setItems] = useState([]);
     const [requests, setRequests] = useState([]);
     const [ledger, setLedger] = useState([]);
@@ -417,92 +421,107 @@ const StationaryAdmin = () => {
                 </div>
             ) : activeTab === 'inventory' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Add Item Form */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit lg:col-span-1">
-                        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <RiAddLine className="text-indigo-600 text-xl" />
-                            Add New Stationary Item
-                        </h2>
-                        <form onSubmit={handleAddItem} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Item Name</label>
-                                <input
-                                    type="text"
-                                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                    placeholder="e.g. A4 Paper Rim / Blue Pens"
-                                    value={newItemName}
-                                    onChange={e => setNewItemName(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
+                    {/* Add Item Form / HOD View Notice */}
+                    {isAdmin ? (
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit lg:col-span-1">
+                            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <RiAddLine className="text-indigo-600 text-xl" />
+                                Add New Stationary Item
+                            </h2>
+                            <form onSubmit={handleAddItem} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
-                                    <select
-                                        className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        value={newCategory}
-                                        onChange={e => setNewCategory(e.target.value)}
-                                    >
-                                        <option value="Consumable">Consumable</option>
-                                        <option value="Returnable">Returnable</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Unit</label>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Item Name</label>
                                     <input
                                         type="text"
                                         className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        placeholder="pcs / boxes / rims"
-                                        value={newUnit}
-                                        onChange={e => setNewUnit(e.target.value)}
+                                        placeholder="e.g. A4 Paper Rim / Blue Pens"
+                                        value={newItemName}
+                                        onChange={e => setNewItemName(e.target.value)}
                                         required
                                     />
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
+                                        <select
+                                            className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            value={newCategory}
+                                            onChange={e => setNewCategory(e.target.value)}
+                                        >
+                                            <option value="Consumable">Consumable</option>
+                                            <option value="Returnable">Returnable</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Unit</label>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            placeholder="pcs / boxes / rims"
+                                            value={newUnit}
+                                            onChange={e => setNewUnit(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Total Stock</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            placeholder="e.g. 100"
+                                            value={newTotalStock}
+                                            onChange={e => setNewTotalStock(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Min Alert Limit</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            placeholder="5"
+                                            value={newMinLimit}
+                                            onChange={e => setNewMinLimit(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Total Stock</label>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bill / Invoice No.</label>
                                     <input
-                                        type="number"
-                                        min="1"
+                                        type="text"
                                         className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        placeholder="e.g. 100"
-                                        value={newTotalStock}
-                                        onChange={e => setNewTotalStock(e.target.value)}
-                                        required
+                                        placeholder="BILL-2026-XXXX"
+                                        value={newBillNumber}
+                                        onChange={e => setNewBillNumber(e.target.value)}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Min Alert Limit</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        placeholder="5"
-                                        value={newMinLimit}
-                                        onChange={e => setNewMinLimit(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bill / Invoice No.</label>
-                                <input
-                                    type="text"
-                                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                    placeholder="BILL-2026-XXXX"
-                                    value={newBillNumber}
-                                    onChange={e => setNewBillNumber(e.target.value)}
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
-                            >
-                                <RiAddLine size={20} /> Add Item & Write Ledger
-                            </button>
-                        </form>
-                    </div>
+                                <button
+                                    type="submit"
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <RiAddLine size={20} /> Add Item & Write Ledger
+                                </button>
+                            </form>
+                        </div>
+                    ) : (
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit lg:col-span-1 space-y-3">
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <RiStore2Line className="text-indigo-600 text-xl" />
+                                HOD View Control
+                            </h2>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                As HOD, you can view live stock levels, review and approve/reject teacher requisition requests, and inspect issue logs & analytics.
+                            </p>
+                            <p className="text-xs bg-amber-50 text-amber-800 p-3 rounded-xl font-semibold border border-amber-200">
+                                ℹ️ Creating new items, adding stock, editing, or deleting records is restricted to System Admin.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Inventory Items List */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
@@ -550,29 +569,31 @@ const StationaryAdmin = () => {
                                             )}
                                         </div>
 
-                                        <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
-                                            <button
-                                                onClick={() => {
-                                                    setAddingStockItem(item);
-                                                    setAddStockBill(item.bill_number || '');
-                                                }}
-                                                className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold py-2 rounded-xl transition border border-emerald-200"
-                                            >
-                                                + Add Stock
-                                            </button>
-                                            <button
-                                                onClick={() => setEditingItem(item)}
-                                                className="px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl transition border border-slate-200"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteItem(item.id)}
-                                                className="px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 rounded-xl transition border border-rose-200"
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
+                                        {isAdmin && (
+                                            <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                                                <button
+                                                    onClick={() => {
+                                                        setAddingStockItem(item);
+                                                        setAddStockBill(item.bill_number || '');
+                                                    }}
+                                                    className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold py-2 rounded-xl transition border border-emerald-200"
+                                                >
+                                                    + Add Stock
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingItem(item)}
+                                                    className="px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl transition border border-slate-200"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteItem(item.id)}
+                                                    className="px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 rounded-xl transition border border-rose-200"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -660,20 +681,24 @@ const StationaryAdmin = () => {
                                                     </button>
                                                 </>
                                             )}
-                                            <button
-                                                onClick={() => setEditingRequest(req)}
-                                                className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition border border-indigo-200 flex items-center gap-1"
-                                                title="Edit Request"
-                                            >
-                                                <RiPencilLine size={15} /> Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteRequest(req.id)}
-                                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition border border-rose-200 flex items-center gap-1"
-                                                title="Delete Request"
-                                            >
-                                                <RiDeleteBinLine size={15} /> Delete
-                                            </button>
+                                            {isAdmin && (
+                                                <>
+                                                    <button
+                                                        onClick={() => setEditingRequest(req)}
+                                                        className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition border border-indigo-200 flex items-center gap-1"
+                                                        title="Edit Request"
+                                                    >
+                                                        <RiPencilLine size={15} /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteRequest(req.id)}
+                                                        className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition border border-rose-200 flex items-center gap-1"
+                                                        title="Delete Request"
+                                                    >
+                                                        <RiDeleteBinLine size={15} /> Delete
+                                                    </button>
+                                                </>
+                                            )}
                                             <button
                                                 onClick={() => handlePrintInvoice(req)}
                                                 className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition border border-slate-200"
@@ -778,24 +803,26 @@ const StationaryAdmin = () => {
                                                 <div className="font-semibold text-slate-700">{row.reference_no}</div>
                                                 <div className="text-slate-400 max-w-xs truncate">{row.notes}</div>
                                             </td>
-                                            <td className="p-3 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button
-                                                        onClick={() => setEditingLedger(row)}
-                                                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                                        title="Edit Entry"
-                                                    >
-                                                        <RiPencilLine size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteLedger(row.id)}
-                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                                        title="Delete Entry"
-                                                    >
-                                                        <RiDeleteBinLine size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            {isAdmin && (
+                                                <td className="p-3 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            onClick={() => setEditingLedger(row)}
+                                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                            title="Edit Entry"
+                                                        >
+                                                            <RiPencilLine size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteLedger(row.id)}
+                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                            title="Delete Entry"
+                                                        >
+                                                            <RiDeleteBinLine size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 {filteredLedger.filter(row => row.transaction_type === 'ISSUED' || row.transaction_type === 'RETURNED').length === 0 && (
@@ -887,24 +914,26 @@ const StationaryAdmin = () => {
                                                 <div className="font-semibold text-slate-800">{row.user_name || 'Admin'}</div>
                                                 <div className="text-slate-400 max-w-xs truncate">{row.notes}</div>
                                             </td>
-                                            <td className="p-3 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button
-                                                        onClick={() => setEditingLedger(row)}
-                                                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                                        title="Edit Purchase Entry"
-                                                    >
-                                                        <RiPencilLine size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteLedger(row.id)}
-                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                                        title="Delete Purchase Entry"
-                                                    >
-                                                        <RiDeleteBinLine size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            {isAdmin && (
+                                                <td className="p-3 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            onClick={() => setEditingLedger(row)}
+                                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                            title="Edit Purchase Entry"
+                                                        >
+                                                            <RiPencilLine size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteLedger(row.id)}
+                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                            title="Delete Purchase Entry"
+                                                        >
+                                                            <RiDeleteBinLine size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 {filteredLedger.filter(row => row.transaction_type === 'RECEIVED' || row.transaction_type === 'RESTOCK').length === 0 && (
