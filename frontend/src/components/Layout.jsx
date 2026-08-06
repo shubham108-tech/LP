@@ -1,11 +1,26 @@
 import Sidebar from './Sidebar';
 import { Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RiMenuLine } from 'react-icons/ri';
 import Notifications from './Notifications';
 
 const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Prevent body background scrolling on mobile when sidebar is open
+    useEffect(() => {
+        if (isSidebarOpen) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        };
+    }, [isSidebarOpen]);
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -16,7 +31,11 @@ const Layout = () => {
                 </div>
                 <div className="flex items-center gap-4">
                     <Notifications />
-                    <button onClick={() => setIsSidebarOpen(true)} className="text-purple-300 hover:text-white">
+                    <button 
+                        onClick={() => setIsSidebarOpen(true)} 
+                        className="text-purple-300 hover:text-white p-1 rounded-lg focus:outline-none"
+                        aria-label="Open navigation menu"
+                    >
                         <RiMenuLine size={24} />
                     </button>
                 </div>
@@ -25,7 +44,7 @@ const Layout = () => {
             {/* Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
                     onClick={() => setIsSidebarOpen(false)}
                 ></div>
             )}
