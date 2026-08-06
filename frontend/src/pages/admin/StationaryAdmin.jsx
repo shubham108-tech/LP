@@ -292,37 +292,220 @@ const StationaryAdmin = () => {
         printWindow.document.close();
     };
 
-    const exportLedgerToCSV = () => {
-        if (!ledger.length) return toast.error('No stock register data to export');
-        const csvData = ledger.map(row => ({
-            "Sr. No.": row.sr_no,
-            "Date & Time": new Date(row.date).toLocaleString(),
-            "Item Name": row.item_name,
-            "Category": row.category,
-            "Transaction Type": row.transaction_type,
-            "Received Qty (+)": row.received_qty > 0 ? row.received_qty : 0,
-            "Issued Qty (-)": row.issued_qty > 0 ? row.issued_qty : 0,
-            "Balance Stock": row.balance,
-            "Ref / Bill No / User": `${row.reference_no} (${row.user_name})`,
-            "Notes": row.notes
-        }));
-        
-        let csvContent = "data:text/csv;charset=utf-8,";
-        const keys = Object.keys(csvData[0]);
-        csvContent += keys.join(",") + "\r\n";
-        csvData.forEach(row => {
-            const values = keys.map(k => `"${String(row[k] || '').replace(/"/g, '""')}"`);
-            csvContent += values.join(",") + "\r\n";
+    const exportDataToCSV = (title, dataList, sectionName = 'General') => {
+        if (!dataList || !dataList.length) return toast.error(`No ${title.toLowerCase()} records to export`);
+
+        let totalQty = 0;
+        const formattedRows = dataList.map((row, idx) => {
+            const qty = row.received_qty || row.issued_qty || row.quantity || 0;
+            totalQty += Number(qty);
+            return {
+                "Sr. No.": `#${idx + 1}`,
+                "Date & Time": new Date(row.date || row.requested_at || Date.now()).toLocaleString(),
+                "Bill / Ref No.": row.reference_no || row.bill_number || 'N/A',
+                "Item Name": row.item_name || 'N/A',
+                "Category": row.category || 'N/A',
+                "Type / Status": row.transaction_type || row.status || 'N/A',
+                "Qty": `${qty} ${row.unit || 'pcs'}`,
+                "Stock Balance": row.balance !== undefined ? `${row.balance} ${row.unit || 'pcs'}` : 'N/A',
+                "User / Department": row.user_name || 'Admin',
+                "Notes / Reason": row.notes || row.reason || 'N/A'
+            };
         });
 
-        const encodedUri = encodeURI(csvContent);
+        // UTF-8 BOM prefix \uFEFF for perfect Excel rendering
+        let csvString = "\uFEFF";
+        csvString += `LIBRARYPRO - ${title.toUpperCase()}\r\n`;
+        csvString += `Section: ${sectionName}\r\n`;
+        csvString += `Generated Date: ${new Date().toLocaleString()}\r\n\r\n`;
+
+        const keys = Object.keys(formattedRows[0]);
+        csvString += keys.join(",") + "\r\n";
+
+        formattedRows.forEach(row => {
+            const values = keys.map(k => `"${String(row[k] || '').replace(/"/g, '""')}"`);
+            csvString += values.join(",") + "\r\n";
+        });
+
+        csvString += `\r\n"","","","TOTAL RECORDS: ${dataList.length}","","","TOTAL QTY: ${totalQty}","","",""\r\n`;
+
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `stationary_stock_register_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${title.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success(`${title} exported to CSV!`);
     };
+
+    const generatePDFReport = (reportTitle, dataList, sectionName = 'General') => {
+        if (!dataList || !dataList.length) return toast.error(`No data to generate ${reportTitle}`);
+
+        let totalQty = 0;
+        let totalRecords = dataList.length;
+
+        const tableRowsHtml = dataList.map((row, idx) => {
+            const qty = row.received_qty || row.issued_qty || row.quantity || 0;
+            totalQty += Number(qty);
+            const status = row.transaction_type || row.status || 'N/A';
+            
+            let badgeClass = 'badge-amber';
+            if (['RECEIVED', 'RESTOCK', 'Approved'].includes(status)) badgeClass = 'badge-green';
+            if (['ISSUED', 'Rejected'].includes(status)) badgeClass = 'badge-red';
+
+            return `
+                <tr>
+                    <td style="text-align: center; font-weight: bold;">#${idx + 1}</td>
+                    <td>${new Date(row.date || row.requested_at || Date.now()).toLocaleDateString()}<br><small style="color: #64748b;">${new Date(row.date || row.requested_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
+                    <td><span style="font-family: monospace; font-weight: bold; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${row.reference_no || row.bill_number || 'N/A'}</span></td>
+                    <td><strong>${row.item_name || 'N/A'}</strong><br><small style="color: #64748b; text-transform: uppercase;">${row.category || ''}</small></td>
+                    <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                    <td style="text-align: right; font-weight: bold;">${qty} ${row.unit || 'pcs'}</td>
+                    <td style="text-align: right; font-weight: bold; color: #4338ca;">${row.balance !== undefined ? row.balance + ' ' + (row.unit || 'pcs') : '-'}</td>
+                    <td><strong>${row.user_name || 'Admin'}</strong><br><small style="color: #64748b;">${row.notes || row.reason || ''}</small></td>
+                </tr>
+            `;
+        }).join('');
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>${reportTitle} - LibraryPro Executive Report</title>
+                    <style>
+                        @page { size: A4 portrait; margin: 12mm; }
+                        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; color: #0f172a; background: #fff; }
+                        
+                        /* Report Header Box */
+                        .header-banner { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #4f46e5; padding-bottom: 12px; margin-bottom: 20px; }
+                        .org-logo { font-size: 24px; font-weight: 900; color: #4338ca; letter-spacing: -0.5px; }
+                        .report-heading { font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px; }
+                        .report-meta { text-align: right; font-size: 12px; color: #475569; line-height: 1.5; }
+                        
+                        /* 3D Boxed Stat Cards */
+                        .summary-grid { display: flex; gap: 15px; margin-bottom: 20px; }
+                        .stat-card { flex: 1; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; background: #f8fafc; box-shadow: 0 4px 8px rgba(0,0,0,0.04); }
+                        .stat-title { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px; }
+                        .stat-val { font-size: 20px; font-weight: 900; color: #1e1b4b; margin-top: 4px; }
+
+                        /* 3D Boxed Table */
+                        .table-wrap { border: 2px solid #cbd5e1; border-radius: 10px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th { background: #0f172a; color: #ffffff; text-align: left; padding: 10px; font-weight: 700; text-transform: uppercase; font-size: 11px; border: 1px solid #1e293b; }
+                        td { padding: 9px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
+                        tr:nth-child(even) { background-color: #f8fafc; }
+                        
+                        .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
+                        .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+                        .badge-red { background: #ffe4e6; color: #be123c; border: 1px solid #fca5a5; }
+                        .badge-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+                        .total-row td { background: #e0e7ff; color: #3730a3; font-weight: 800; font-size: 13px; border-top: 2px solid #4f46e5; }
+
+                        /* Signatures & Department Seal Box */
+                        .sign-container { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 15px; }
+                        .sign-box { width: 200px; text-align: center; border-top: 2px dashed #64748b; padding-top: 8px; font-size: 12px; font-weight: 700; color: #334155; }
+                        .stamp-box { border: 2px dashed #cbd5e1; width: 130px; height: 70px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; margin: 0 auto; text-align: center; }
+                        
+                        .footer-bar { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header-banner">
+                        <div>
+                            <div class="org-logo">LibraryPro System</div>
+                            <div class="report-heading">${reportTitle}</div>
+                        </div>
+                        <div class="report-meta">
+                            <strong>Department:</strong> Stationary & Purchase Register<br>
+                            <strong>Section:</strong> ${sectionName}<br>
+                            <strong>Generated:</strong> ${new Date().toLocaleString()}
+                        </div>
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="stat-card">
+                            <div class="stat-title">Total Records</div>
+                            <div class="stat-val">${totalRecords} Entries</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">Total Quantity Handled</div>
+                            <div class="stat-val">${totalQty} Units</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">Report Type</div>
+                            <div class="stat-val" style="font-size: 15px; text-transform: capitalize;">${sectionName}</div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">Sr.</th>
+                                    <th style="width: 110px;">Date & Time</th>
+                                    <th style="width: 100px;">Bill / Ref No.</th>
+                                    <th>Item & Category</th>
+                                    <th style="width: 90px; text-align: center;">Type</th>
+                                    <th style="width: 90px; text-align: right;">Quantity</th>
+                                    <th style="width: 90px; text-align: right;">Balance</th>
+                                    <th>User / Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRowsHtml}
+                                <tr class="total-row">
+                                    <td colspan="5" style="text-align: right;">TOTAL QUANTITY:</td>
+                                    <td style="text-align: right;">${totalQty}</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="sign-container">
+                        <div class="sign-box">Store In-Charge / Admin</div>
+                        <div>
+                            <div class="stamp-box">Official Department<br>Seal / Stamp</div>
+                        </div>
+                        <div class="sign-box">HOD / Principal Verification</div>
+                    </div>
+
+                    <div class="footer-bar">
+                        Confidential Official Document • Generated by LibraryPro Inventory Management System
+                    </div>
+
+                    <script>
+                        window.onload = function() { window.print(); }
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    const ExportButtonsGroup = ({ title, dataList, sectionName }) => (
+        <div className="flex items-center gap-2">
+            <button
+                onClick={() => exportDataToCSV(title, dataList, sectionName)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition whitespace-nowrap"
+                title="Export Excel-optimized CSV"
+            >
+                <RiFileExcel2Line size={15} /> Export CSV
+            </button>
+            <button
+                onClick={() => generatePDFReport(title, dataList, sectionName)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
+                title="Generate 3D Boxed PDF / Print Report"
+            >
+                <RiPrinterLine size={15} /> PDF / Print Report
+            </button>
+        </div>
+    );
 
     const filteredItems = useMemo(() => {
         if (!inventorySearch) return items;
@@ -595,7 +778,17 @@ const StationaryAdmin = () => {
             ) : activeTab === 'requests' ? (
                 /* Requests Tab */
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 className="text-lg font-bold text-slate-800 mb-4">Requisition & Issue Requests</h2>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800">Requisition & Issue Requests</h2>
+                            <p className="text-xs text-slate-500">Manage and track teacher requisition requests.</p>
+                        </div>
+                        <ExportButtonsGroup
+                            title="Teacher Requisition Requests"
+                            dataList={requests}
+                            sectionName="Requisitions"
+                        />
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -729,12 +922,11 @@ const StationaryAdmin = () => {
                                     onChange={e => setLedgerSearch(e.target.value)}
                                 />
                             </div>
-                            <button
-                                onClick={exportLedgerToCSV}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
-                            >
-                                <RiDownloadLine size={16} /> Export Issue Log CSV
-                            </button>
+                            <ExportButtonsGroup
+                                title="Stationary Issue & Dispatch Register"
+                                dataList={filteredLedger.filter(row => row.transaction_type === 'ISSUED' || row.transaction_type === 'RETURNED')}
+                                sectionName="Issue & Dispatch Logs"
+                            />
                         </div>
                     </div>
 
@@ -847,12 +1039,11 @@ const StationaryAdmin = () => {
                                     onChange={e => setLedgerSearch(e.target.value)}
                                 />
                             </div>
-                            <button
-                                onClick={exportLedgerToCSV}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition whitespace-nowrap"
-                            >
-                                <RiDownloadLine size={16} /> Export Purchase CSV
-                            </button>
+                            <ExportButtonsGroup
+                                title="Admin Purchase & Restock Register"
+                                dataList={filteredLedger.filter(row => row.transaction_type === 'RECEIVED' || row.transaction_type === 'RESTOCK')}
+                                sectionName="Purchase Register"
+                            />
                         </div>
                     </div>
 
