@@ -15,6 +15,7 @@ router.delete('/items/:id', authenticateToken, isAdmin, stationaryController.del
 router.post('/requests', authenticateToken, stationaryController.requestItem);
 router.get('/requests', authenticateToken, stationaryController.getRequests);
 router.put('/requests/:id', authenticateToken, isAdmin, stationaryController.updateRequestStatus);
+router.delete('/requests/:id', authenticateToken, isAdmin, stationaryController.deleteRequest);
 
 // Stock Movement Register / Ledger (Admin & HOD)
 router.get('/ledger', authenticateToken, isAdmin, stationaryController.getLedger);

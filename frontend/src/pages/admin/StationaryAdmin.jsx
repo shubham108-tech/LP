@@ -27,6 +27,7 @@ const StationaryAdmin = () => {
 
     // Form states
     const [editingItem, setEditingItem] = useState(null);
+    const [editingRequest, setEditingRequest] = useState(null);
     const [editingLedger, setEditingLedger] = useState(null);
     const [addingStockItem, setAddingStockItem] = useState(null);
     const [addStockAmount, setAddStockAmount] = useState('');
@@ -107,6 +108,35 @@ const StationaryAdmin = () => {
             fetchData();
         } catch (error) {
             toast.error(error.response?.data?.message || `Error marking request as ${status}`);
+        }
+    };
+
+    const handleDeleteRequest = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this stationary request?')) return;
+        try {
+            await api.delete(`/stationary/requests/${id}`);
+            toast.success('Request deleted successfully');
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error deleting request');
+        }
+    };
+
+    const handleEditRequestSubmit = async (e) => {
+        e.preventDefault();
+        if (!editingRequest) return;
+        try {
+            await api.put(`/stationary/requests/${editingRequest.id}`, {
+                status: editingRequest.status,
+                quantity: Number(editingRequest.quantity),
+                unit: editingRequest.unit,
+                reason: editingRequest.reason
+            });
+            toast.success('Request updated successfully');
+            setEditingRequest(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error updating request');
         }
     };
 
@@ -605,14 +635,15 @@ const StationaryAdmin = () => {
                                                 {req.status}
                                             </span>
                                             {req.acted_at ? (
-                                                <div className="text-[11px] text-slate-500 font-mono mt-1">
-                                                    Action: {new Date(req.acted_at).toLocaleDateString()} {new Date(req.acted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                <div className="text-xs text-indigo-700 font-semibold flex items-center justify-center gap-1 mt-1">
+                                                    <span>📅</span> {new Date(req.acted_at).toLocaleDateString()}
+                                                    <span>⏰</span> {new Date(req.acted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             ) : (
                                                 <div className="text-[11px] text-amber-600 font-medium mt-1">Awaiting Action</div>
                                             )}
                                         </td>
-                                        <td className="p-3 text-right space-x-1">
+                                        <td className="p-3 text-right space-x-1 flex items-center justify-end gap-1">
                                             {req.status === 'Pending' && (
                                                 <>
                                                     <button
@@ -629,17 +660,23 @@ const StationaryAdmin = () => {
                                                     </button>
                                                 </>
                                             )}
-                                            {req.status === 'Approved' && (
-                                                <button
-                                                    onClick={() => handleRequestAction(req.id, 'Returned')}
-                                                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition"
-                                                >
-                                                    Mark Returned
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => setEditingRequest(req)}
+                                                className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition border border-indigo-200 flex items-center gap-1"
+                                                title="Edit Request"
+                                            >
+                                                <RiPencilLine size={15} /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteRequest(req.id)}
+                                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition border border-rose-200 flex items-center gap-1"
+                                                title="Delete Request"
+                                            >
+                                                <RiDeleteBinLine size={15} /> Delete
+                                            </button>
                                             <button
                                                 onClick={() => handlePrintInvoice(req)}
-                                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
+                                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition border border-slate-200"
                                                 title="Print Invoice / Receipt"
                                             >
                                                 <RiPrinterLine size={15} />
@@ -1003,6 +1040,52 @@ const StationaryAdmin = () => {
                             <div className="flex justify-end gap-2 mt-6">
                                 <button type="button" onClick={() => setEditingLedger(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>
                                 <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-md shadow-indigo-600/20">Save Ledger Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Request Modal */}
+            {editingRequest && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+                        <h3 className="text-lg font-bold mb-4 text-slate-800">Edit Requisition Request #REQ-{editingRequest.id}</h3>
+                        <form onSubmit={handleEditRequestSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Teacher / User</label>
+                                <input type="text" disabled className="w-full border rounded-xl p-2.5 text-sm bg-slate-100 font-semibold text-slate-700" value={`${editingRequest.user_name} (${editingRequest.user_email})`} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Item Requested</label>
+                                <input type="text" disabled className="w-full border rounded-xl p-2.5 text-sm bg-slate-100 font-semibold text-indigo-700" value={editingRequest.item_name} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Quantity</label>
+                                    <input type="number" min="1" className="w-full border rounded-xl p-2.5 text-sm font-bold text-slate-800" value={editingRequest.quantity} onChange={e => setEditingRequest({ ...editingRequest, quantity: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Unit</label>
+                                    <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={editingRequest.unit || 'pcs'} onChange={e => setEditingRequest({ ...editingRequest, unit: e.target.value })} required />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Status</label>
+                                <select className="w-full border rounded-xl p-2.5 text-sm font-semibold text-slate-700 bg-slate-50" value={editingRequest.status} onChange={e => setEditingRequest({ ...editingRequest, status: e.target.value })}>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
+                                    <option value="Returned">Returned</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Reason / Purpose</label>
+                                <textarea rows="3" className="w-full border rounded-xl p-2.5 text-sm" value={editingRequest.reason || ''} onChange={e => setEditingRequest({ ...editingRequest, reason: e.target.value })} placeholder="Reason for requisition..."></textarea>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-6">
+                                <button type="button" onClick={() => setEditingRequest(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-md shadow-indigo-600/20">Save Changes</button>
                             </div>
                         </form>
                     </div>

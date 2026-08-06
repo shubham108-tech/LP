@@ -259,10 +259,10 @@ exports.getRequests = async (req, res) => {
     }
 };
 
-// Update request status (Admin/HOD)
+// Update request status & details (Admin/HOD)
 exports.updateRequestStatus = async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body; // 'Approved', 'Rejected', 'Returned'
+    const { status, quantity, reason, unit } = req.body;
     const admin_user_id = req.user?.id;
 
     try {
@@ -271,21 +271,21 @@ exports.updateRequestStatus = async (req, res) => {
 
         const request = requestData[0];
         const prevStatus = request.status;
-
-        if (prevStatus === status) {
-            return res.json({ message: `Request is already ${status}` });
-        }
+        const targetStatus = status || prevStatus;
+        const targetQuantity = quantity !== undefined ? Number(quantity) : request.quantity;
+        const targetReason = reason !== undefined ? reason : request.reason;
+        const targetUnit = unit !== undefined ? unit : request.unit;
 
         // If status changes from Pending to Approved: decrease stock & write ledger
-        if (prevStatus === 'Pending' && status === 'Approved') {
+        if (prevStatus === 'Pending' && targetStatus === 'Approved') {
             const [itemData] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [request.item_id]);
             const currentStock = itemData[0]?.available_stock || 0;
 
-            if (currentStock < request.quantity) {
+            if (currentStock < targetQuantity) {
                 return res.status(400).json({ message: 'Not enough available stock to approve this request.' });
             }
 
-            const newStock = currentStock - request.quantity;
+            const newStock = currentStock - targetQuantity;
 
             // Decrement available stock
             await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [newStock, request.item_id]);
@@ -295,15 +295,15 @@ exports.updateRequestStatus = async (req, res) => {
                 `INSERT INTO stationary_ledger 
                 (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
                 VALUES (?, 'ISSUED', 0, ?, ?, ?, ?, ?, 'Stationary Issued to User')`,
-                [request.item_id, request.quantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
+                [request.item_id, targetQuantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
             );
         }
 
         // If status changes from Approved to Returned: increase stock & write ledger
-        if (prevStatus === 'Approved' && status === 'Returned') {
+        if (prevStatus === 'Approved' && targetStatus === 'Returned') {
             const [itemData] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [request.item_id]);
             const currentStock = itemData[0]?.available_stock || 0;
-            const newStock = currentStock + request.quantity;
+            const newStock = currentStock + targetQuantity;
 
             // Increment available stock
             await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [newStock, request.item_id]);
@@ -313,17 +313,38 @@ exports.updateRequestStatus = async (req, res) => {
                 `INSERT INTO stationary_ledger 
                 (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
                 VALUES (?, 'RETURNED', ?, 0, ?, ?, ?, ?, 'Stationary Returned by User')`,
-                [request.item_id, request.quantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
+                [request.item_id, targetQuantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
             );
         }
 
-        // Update status in requests table
-        await db.query('UPDATE stationary_requests SET status = ?, acted_at = NOW() WHERE id = ?', [status, id]);
+        // Update status, quantity, reason, unit in requests table
+        const hasStatusChanged = prevStatus !== targetStatus;
+        await db.query(
+            `UPDATE stationary_requests 
+             SET status = ?, quantity = ?, reason = ?, unit = ? ${hasStatusChanged ? ', acted_at = NOW()' : ''} 
+             WHERE id = ?`,
+            [targetStatus, targetQuantity, targetReason, targetUnit, id]
+        );
 
-        res.json({ message: `Request marked as ${status}` });
+        res.json({ message: 'Request updated successfully' });
     } catch (error) {
         console.error('UPDATE REQUEST ERROR:', error);
         res.status(500).json({ message: 'Error updating request', error: error.message });
+    }
+};
+
+// Delete request (Admin/HOD)
+exports.deleteRequest = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [result] = await db.query('DELETE FROM stationary_requests WHERE id = ?', [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+        res.json({ message: 'Request deleted successfully' });
+    } catch (error) {
+        console.error('DELETE REQUEST ERROR:', error);
+        res.status(500).json({ message: 'Error deleting request', error: error.message });
     }
 };
 

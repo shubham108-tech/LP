@@ -349,6 +349,14 @@ const StationaryTeacher = () => {
                                                 }`}>
                                                     {req.status}
                                                 </span>
+                                                {req.acted_at ? (
+                                                    <div className="text-xs text-indigo-700 font-semibold flex items-center justify-center gap-1 mt-1">
+                                                        <span>📅</span> {new Date(req.acted_at).toLocaleDateString()}
+                                                        <span>⏰</span> {new Date(req.acted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[11px] text-amber-600 font-medium mt-1">Awaiting Action</div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
