@@ -10,8 +10,8 @@ const Notifications = () => {
 
     useEffect(() => {
         fetchNotifications();
-        // Poll every minute
-        const interval = setInterval(fetchNotifications, 60000);
+        // Poll every 15 seconds for quick notification delivery
+        const interval = setInterval(fetchNotifications, 15000);
         return () => clearInterval(interval);
     }, []);
 

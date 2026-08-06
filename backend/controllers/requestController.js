@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { sendWhatsAppMessage } = require('../utils/whatsapp');
+const { notifyAdmins } = require('./notificationController');
 
 exports.placeRequest = async (req, res) => {
     const { book_id, reason, reference_link } = req.body;
@@ -29,6 +30,13 @@ Reason: ${reason || 'N/A'}
 Date: ${requestDate}`;
 
         await sendWhatsAppMessage(message);
+
+        // Notify Admins & HODs in-app notification bell
+        try {
+            await notifyAdmins(`📚 New Book Request: ${user_name} requested "${book.book_name}".`, 'info');
+        } catch (notifErr) {
+            console.error('Notification error on book request:', notifErr);
+        }
 
         res.status(201).json({ message: 'Request placed successfully' });
     } catch (error) {

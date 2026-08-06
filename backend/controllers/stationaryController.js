@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { notifyAdmins } = require('./notificationController');
 
 // --- ITEM MANAGEMENT (Admin / HOD) ---
 
@@ -226,6 +227,20 @@ exports.requestItem = async (req, res) => {
             'INSERT INTO stationary_requests (user_id, item_id, quantity, unit, reason) VALUES (?, ?, ?, ?, ?)',
             [user_id, item_id, quantity, selectedUnit, reason]
         );
+
+        // Notify Admins and HODs about new Stationary Request
+        try {
+            const [userRow] = await db.query('SELECT name FROM users WHERE id = ?', [user_id]);
+            const [itemRow] = await db.query('SELECT item_name FROM stationary_items WHERE id = ?', [item_id]);
+            const requesterName = userRow[0]?.name || 'Teacher';
+            const itemName = itemRow[0]?.item_name || 'stationary item';
+            
+            const notificationMsg = `📝 New Stationary Request: ${requesterName} requested ${quantity} ${selectedUnit} of "${itemName}".`;
+            await notifyAdmins(notificationMsg, 'warning');
+        } catch (notifErr) {
+            console.error('Notification error on stationary request:', notifErr);
+        }
+
         res.status(201).json({ message: 'Request submitted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error submitting request', error: error.message });
