@@ -10,6 +10,47 @@
   }
 }
 
+/* Custom 3D Glassmorphism & Enhanced Card Box Shadow System */
+.glass-box,
+.bg-white.rounded-xl,
+.bg-white.rounded-2xl,
+.bg-white.rounded-3xl,
+.bg-white.rounded-lg,
+.bg-white.shadow-sm,
+.bg-white.shadow-md,
+.bg-white.border {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(216, 180, 254, 0.45) !important;
+  box-shadow: 
+    0 22px 50px -12px rgba(15, 23, 42, 0.22),
+    0 10px 25px -5px rgba(99, 102, 241, 0.15),
+    0 4px 10px 0 rgba(0, 0, 0, 0.06),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 1) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+}
+
+/* Enhanced 3D Elevation Hover effect for cards */
+.glass-box:hover,
+.bg-white.rounded-xl:hover,
+.bg-white.rounded-2xl:hover,
+.bg-white.rounded-3xl:hover,
+.bg-white.rounded-lg:hover {
+  transform: translateY(-5px) scale(1.004) !important;
+  border-color: rgba(192, 132, 252, 0.75) !important;
+  box-shadow: 
+    0 35px 70px -15px rgba(99, 102, 241, 0.32),
+    0 16px 32px -6px rgba(15, 23, 42, 0.2),
+    0 6px 14px 0 rgba(192, 132, 252, 0.15),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+/* Sub-cards and nested items inside main boxes */
+.border-slate-200, .border-gray-200, .border-slate-100 {
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12), 0 3px 8px -2px rgba(0, 0, 0, 0.06) !important;
+}
+
 /* Custom Sidebar Touch Scrollbar */
 .custom-sidebar-scroll {
   -webkit-overflow-scrolling: touch;
