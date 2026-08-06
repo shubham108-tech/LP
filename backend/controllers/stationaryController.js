@@ -259,11 +259,10 @@ exports.getRequests = async (req, res) => {
     }
 };
 
-// Update request status & details (Admin/HOD)
+// Update request status & details (Admin/HOD) with Automatic Stock Rebalancing
 exports.updateRequestStatus = async (req, res) => {
     const { id } = req.params;
     const { status, quantity, reason, unit } = req.body;
-    const admin_user_id = req.user?.id;
 
     try {
         const [requestData] = await db.query('SELECT * FROM stationary_requests WHERE id = ?', [id]);
@@ -271,53 +270,51 @@ exports.updateRequestStatus = async (req, res) => {
 
         const request = requestData[0];
         const prevStatus = request.status;
+        const prevQty = Number(request.quantity);
+        const itemId = request.item_id;
+
         const targetStatus = status || prevStatus;
-        const targetQuantity = quantity !== undefined ? Number(quantity) : request.quantity;
+        const targetQuantity = quantity !== undefined ? Number(quantity) : prevQty;
         const targetReason = reason !== undefined ? reason : request.reason;
         const targetUnit = unit !== undefined ? unit : request.unit;
 
-        // If status changes from Pending to Approved: decrease stock & write ledger
-        if (prevStatus === 'Pending' && targetStatus === 'Approved') {
-            const [itemData] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [request.item_id]);
-            const currentStock = itemData[0]?.available_stock || 0;
+        // Fetch item stock
+        const [itemData] = await db.query('SELECT available_stock, total_stock FROM stationary_items WHERE id = ?', [itemId]);
+        if (itemData.length === 0) return res.status(404).json({ message: 'Item not found' });
 
-            if (currentStock < targetQuantity) {
-                return res.status(400).json({ message: 'Not enough available stock to approve this request.' });
+        let currentAvailable = itemData[0].available_stock;
+
+        // Step A: Revert old status effect
+        if (prevStatus === 'Approved') {
+            currentAvailable += prevQty;
+        }
+
+        // Step B: Apply new status effect
+        if (targetStatus === 'Approved') {
+            if (currentAvailable < targetQuantity) {
+                return res.status(400).json({ message: `Not enough available stock (${currentAvailable}) to approve this request.` });
             }
+            currentAvailable -= targetQuantity;
+        }
 
-            const newStock = currentStock - targetQuantity;
+        // Step C: Update item available_stock in DB if changed
+        if (currentAvailable !== itemData[0].available_stock) {
+            await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [currentAvailable, itemId]);
 
-            // Decrement available stock
-            await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [newStock, request.item_id]);
+            const diff = currentAvailable - itemData[0].available_stock;
+            const transType = diff < 0 ? 'ISSUED' : 'RETURNED';
+            const issQty = diff < 0 ? Math.abs(diff) : 0;
+            const recQty = diff > 0 ? diff : 0;
 
-            // Log ISSUED in ledger
             await db.query(
                 `INSERT INTO stationary_ledger 
                 (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
-                VALUES (?, 'ISSUED', 0, ?, ?, ?, ?, ?, 'Stationary Issued to User')`,
-                [request.item_id, targetQuantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [itemId, transType, recQty, issQty, itemData[0].available_stock, currentAvailable, `REQ-#${request.id}`, request.user_id, `Request Status/Qty Updated to ${targetStatus} (${targetQuantity} ${targetUnit})`]
             );
         }
 
-        // If status changes from Approved to Returned: increase stock & write ledger
-        if (prevStatus === 'Approved' && targetStatus === 'Returned') {
-            const [itemData] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [request.item_id]);
-            const currentStock = itemData[0]?.available_stock || 0;
-            const newStock = currentStock + targetQuantity;
-
-            // Increment available stock
-            await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [newStock, request.item_id]);
-
-            // Log RETURNED in ledger
-            await db.query(
-                `INSERT INTO stationary_ledger 
-                (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
-                VALUES (?, 'RETURNED', ?, 0, ?, ?, ?, ?, 'Stationary Returned by User')`,
-                [request.item_id, targetQuantity, currentStock, newStock, `REQ-#${request.id}`, request.user_id]
-            );
-        }
-
-        // Update status, quantity, reason, unit in requests table
+        // Update status, quantity, reason, unit in stationary_requests table
         const hasStatusChanged = prevStatus !== targetStatus;
         await db.query(
             `UPDATE stationary_requests 
@@ -326,22 +323,43 @@ exports.updateRequestStatus = async (req, res) => {
             [targetStatus, targetQuantity, targetReason, targetUnit, id]
         );
 
-        res.json({ message: 'Request updated successfully' });
+        res.json({ message: 'Request updated successfully and stock inventory rebalanced' });
     } catch (error) {
         console.error('UPDATE REQUEST ERROR:', error);
         res.status(500).json({ message: 'Error updating request', error: error.message });
     }
 };
 
-// Delete request (Admin/HOD)
+// Delete request (Admin/HOD) with Automatic Stock Rebalancing
 exports.deleteRequest = async (req, res) => {
     const { id } = req.params;
     try {
-        const [result] = await db.query('DELETE FROM stationary_requests WHERE id = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Request not found' });
+        const [requestData] = await db.query('SELECT * FROM stationary_requests WHERE id = ?', [id]);
+        if (requestData.length === 0) return res.status(404).json({ message: 'Request not found' });
+
+        const request = requestData[0];
+
+        // If request was Approved, restore deducted stock back to inventory
+        if (request.status === 'Approved') {
+            const [itemData] = await db.query('SELECT available_stock FROM stationary_items WHERE id = ?', [request.item_id]);
+            if (itemData.length > 0) {
+                const currentStock = itemData[0].available_stock;
+                const restoredStock = currentStock + Number(request.quantity);
+
+                await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [restoredStock, request.item_id]);
+
+                // Log in ledger
+                await db.query(
+                    `INSERT INTO stationary_ledger 
+                    (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
+                    VALUES (?, 'RETURNED', ?, 0, ?, ?, ?, ?, 'Stock Restored: Approved Request Deleted')`,
+                    [request.item_id, request.quantity, currentStock, restoredStock, `REQ-#${request.id}`, request.user_id]
+                );
+            }
         }
-        res.json({ message: 'Request deleted successfully' });
+
+        await db.query('DELETE FROM stationary_requests WHERE id = ?', [id]);
+        res.json({ message: 'Request deleted and stock inventory rebalanced successfully' });
     } catch (error) {
         console.error('DELETE REQUEST ERROR:', error);
         res.status(500).json({ message: 'Error deleting request', error: error.message });
@@ -402,7 +420,7 @@ exports.getLedger = async (req, res) => {
     }
 };
 
-// Update ledger log entry (Admin)
+// Update ledger log entry (Admin) with Automatic Stock Rebalancing
 exports.updateLedger = async (req, res) => {
     const { id } = req.params;
     const { reference_no, notes, transaction_type, received_qty, issued_qty } = req.body;
@@ -411,25 +429,70 @@ exports.updateLedger = async (req, res) => {
         const [existing] = await db.query('SELECT * FROM stationary_ledger WHERE id = ?', [id]);
         if (existing.length === 0) return res.status(404).json({ message: 'Ledger entry not found' });
 
+        const oldLog = existing[0];
+        const itemId = oldLog.item_id;
+        const oldType = oldLog.transaction_type;
+        const oldRec = Number(oldLog.received_qty || 0);
+        const oldIss = Number(oldLog.issued_qty || 0);
+
+        const newType = transaction_type || oldType;
+        const newRec = received_qty !== undefined ? Number(received_qty) : oldRec;
+        const newIss = issued_qty !== undefined ? Number(issued_qty) : oldIss;
+
+        // Fetch current item stock
+        const [itemData] = await db.query('SELECT available_stock, total_stock FROM stationary_items WHERE id = ?', [itemId]);
+        if (itemData.length === 0) return res.status(404).json({ message: 'Item associated with ledger entry not found' });
+
+        let currentAvailable = itemData[0].available_stock;
+        let currentTotal = itemData[0].total_stock;
+
+        // Step 1: Revert oldLog stock effect
+        if (oldType === 'RECEIVED' || oldType === 'RESTOCK') {
+            currentAvailable = Math.max(0, currentAvailable - oldRec);
+            currentTotal = Math.max(0, currentTotal - oldRec);
+        } else if (oldType === 'ISSUED') {
+            currentAvailable = currentAvailable + oldIss;
+        } else if (oldType === 'RETURNED') {
+            currentAvailable = Math.max(0, currentAvailable - (oldRec || oldIss));
+        }
+
+        // Step 2: Apply newLog stock effect
+        if (newType === 'RECEIVED' || newType === 'RESTOCK') {
+            currentAvailable = currentAvailable + newRec;
+            currentTotal = currentTotal + newRec;
+        } else if (newType === 'ISSUED') {
+            currentAvailable = Math.max(0, currentAvailable - newIss);
+        } else if (newType === 'RETURNED') {
+            currentAvailable = currentAvailable + (newRec || newIss);
+        }
+
+        // Step 3: Update item stock in stationary_items
+        await db.query(
+            'UPDATE stationary_items SET available_stock = ?, total_stock = ? WHERE id = ?',
+            [currentAvailable, currentTotal, itemId]
+        );
+
+        // Step 4: Update ledger entry with recalculated new_balance
         await db.query(
             `UPDATE stationary_ledger 
              SET reference_no = COALESCE(?, reference_no),
                  notes = COALESCE(?, notes),
                  transaction_type = COALESCE(?, transaction_type),
                  received_qty = COALESCE(?, received_qty),
-                 issued_qty = COALESCE(?, issued_qty)
+                 issued_qty = COALESCE(?, issued_qty),
+                 new_balance = ?
              WHERE id = ?`,
-            [reference_no, notes, transaction_type, received_qty, issued_qty, id]
+            [reference_no, notes, newType, newRec, newIss, currentAvailable, id]
         );
 
-        res.json({ message: 'Ledger log entry updated successfully' });
+        res.json({ message: 'Ledger log entry updated and stock inventory rebalanced successfully' });
     } catch (error) {
         console.error('UPDATE LEDGER ERROR:', error);
         res.status(500).json({ message: 'Error updating ledger entry', error: error.message });
     }
 };
 
-// Delete ledger log entry (Admin)
+// Delete ledger log entry (Admin) with Automatic Stock Rebalancing
 exports.deleteLedger = async (req, res) => {
     const { id } = req.params;
 
@@ -437,8 +500,37 @@ exports.deleteLedger = async (req, res) => {
         const [existing] = await db.query('SELECT * FROM stationary_ledger WHERE id = ?', [id]);
         if (existing.length === 0) return res.status(404).json({ message: 'Ledger entry not found' });
 
+        const oldLog = existing[0];
+        const itemId = oldLog.item_id;
+        const oldType = oldLog.transaction_type;
+        const oldRec = Number(oldLog.received_qty || 0);
+        const oldIss = Number(oldLog.issued_qty || 0);
+
+        // Fetch current item stock
+        const [itemData] = await db.query('SELECT available_stock, total_stock FROM stationary_items WHERE id = ?', [itemId]);
+        if (itemData.length > 0) {
+            let currentAvailable = itemData[0].available_stock;
+            let currentTotal = itemData[0].total_stock;
+
+            // Revert oldLog stock effect
+            if (oldType === 'RECEIVED' || oldType === 'RESTOCK') {
+                currentAvailable = Math.max(0, currentAvailable - oldRec);
+                currentTotal = Math.max(0, currentTotal - oldRec);
+            } else if (oldType === 'ISSUED') {
+                currentAvailable = currentAvailable + oldIss;
+            } else if (oldType === 'RETURNED') {
+                currentAvailable = Math.max(0, currentAvailable - (oldRec || oldIss));
+            }
+
+            // Update item stock in stationary_items
+            await db.query(
+                'UPDATE stationary_items SET available_stock = ?, total_stock = ? WHERE id = ?',
+                [currentAvailable, currentTotal, itemId]
+            );
+        }
+
         await db.query('DELETE FROM stationary_ledger WHERE id = ?', [id]);
-        res.json({ message: 'Ledger log entry deleted successfully' });
+        res.json({ message: 'Ledger log entry deleted and stock inventory rebalanced successfully' });
     } catch (error) {
         console.error('DELETE LEDGER ERROR:', error);
         res.status(500).json({ message: 'Error deleting ledger entry', error: error.message });
