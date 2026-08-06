@@ -421,8 +421,8 @@ const StationaryAdmin = () => {
                 </div>
             ) : activeTab === 'inventory' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Add Item Form / HOD View Notice */}
-                    {isAdmin ? (
+                    {/* Add Item Form (Admin Only) */}
+                    {isAdmin && (
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit lg:col-span-1">
                             <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                                 <RiAddLine className="text-indigo-600 text-xl" />
@@ -508,23 +508,10 @@ const StationaryAdmin = () => {
                                 </button>
                             </form>
                         </div>
-                    ) : (
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit lg:col-span-1 space-y-3">
-                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <RiStore2Line className="text-indigo-600 text-xl" />
-                                HOD View Control
-                            </h2>
-                            <p className="text-xs text-slate-500 leading-relaxed">
-                                As HOD, you can view live stock levels, review and approve/reject teacher requisition requests, and inspect issue logs & analytics.
-                            </p>
-                            <p className="text-xs bg-amber-50 text-amber-800 p-3 rounded-xl font-semibold border border-amber-200">
-                                ℹ️ Creating new items, adding stock, editing, or deleting records is restricted to System Admin.
-                            </p>
-                        </div>
                     )}
 
                     {/* Inventory Items List */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
+                    <div className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-200 ${isAdmin ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <h2 className="text-lg font-bold text-slate-800">Current Stock Inventory</h2>
                             <div className="relative w-full sm:w-64">
