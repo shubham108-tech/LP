@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import DeveloperCredit from '../components/DeveloperCredit';
+import Background3DEffect from '../components/Background3DEffect';
 
 const Register = () => {
     const [name, setName] = useState('');
@@ -59,8 +60,7 @@ const Register = () => {
                         state: {
                             email,
                             registrationToken: res.data.registrationToken
-                        },
-                        replace: true
+                        }
                     });
                     setLoading(false);
                 }, 1000);
@@ -83,8 +83,9 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-800 p-4">
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md text-white">
+        <div className="min-h-screen flex items-center justify-center p-4 relative font-sans">
+            <Background3DEffect />
+            <div className="bg-[#170a35]/80 backdrop-blur-2xl border border-purple-400/30 p-8 rounded-3xl shadow-[0_30px_70px_rgba(147,51,234,0.3)] w-full max-w-md text-white my-8">
                 <h2 className="text-3xl font-bold text-center mb-2">LibraryPro</h2>
                 <p className="text-center text-blue-100 mb-8">
                     Create your account

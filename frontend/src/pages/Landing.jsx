@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DeveloperCredit from '../components/DeveloperCredit';
 import { SERVER_URL } from '../config';
+import Background3DEffect from '../components/Background3DEffect';
 
 const Landing = () => {
     const [stats, setStats] = useState({
@@ -25,7 +26,8 @@ const Landing = () => {
         }
     };
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#120428] via-[#3a065c] to-[#990a88] text-white flex flex-col relative overflow-hidden">
+        <div className="min-h-screen text-white flex flex-col relative overflow-hidden font-sans">
+            <Background3DEffect />
             {/* SVG Wave Background Layers Matching User's Image */}
             <div className="absolute inset-0 pointer-events-none opacity-40">
                 <svg className="absolute w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="none">

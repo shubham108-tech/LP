@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { RiMenuLine } from 'react-icons/ri';
 import Notifications from './Notifications';
+import Background3DEffect from './Background3DEffect';
 
 const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,9 +24,12 @@ const Layout = () => {
     }, [isSidebarOpen]);
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans">
+        <div className="flex min-h-screen font-sans relative">
+            {/* 3D Purple Wallpaper & Interactive Background Layer */}
+            <Background3DEffect />
+
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 w-full bg-[#12072b] border-b border-purple-900/40 text-white z-40 px-4 py-3 flex items-center justify-between shadow-md">
+            <div className="md:hidden fixed top-0 w-full bg-[#12072b]/90 backdrop-blur-xl border-b border-purple-500/30 text-white z-40 px-4 py-3 flex items-center justify-between shadow-lg">
                 <div className="text-xl font-black bg-gradient-to-r from-fuchsia-400 via-purple-300 to-pink-400 text-transparent bg-clip-text">
                     LibraryPro
                 </div>
@@ -53,14 +57,14 @@ const Layout = () => {
 
             <div className={`flex-1 min-h-screen transition-all duration-300 md:ml-64 pt-16 md:pt-0`}>
                 {/* Desktop Header */}
-                <div className="hidden md:flex justify-end items-center px-8 py-4 bg-white border-b border-purple-100 sticky top-0 z-30 shadow-xs">
+                <div className="hidden md:flex justify-end items-center px-8 py-4 bg-white/80 backdrop-blur-xl border-b border-purple-200/50 sticky top-0 z-30 shadow-sm">
                     <Notifications />
                 </div>
 
                 <div className="p-4 md:p-8 max-w-7xl mx-auto">
                     <Outlet />
-                    <div className="mt-12 text-center text-slate-400 text-sm">
-                        Developed by <span className="font-semibold text-purple-700">Shubham Bhendavade</span>
+                    <div className="mt-12 text-center text-purple-200/70 text-sm font-medium drop-shadow">
+                        Developed by <span className="font-bold text-fuchsia-300">Shubham Bhendavade</span>
                     </div>
                 </div>
             </div>

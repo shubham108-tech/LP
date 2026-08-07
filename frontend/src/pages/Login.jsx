@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import DeveloperCredit from '../components/DeveloperCredit';
+import Background3DEffect from '../components/Background3DEffect';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -31,18 +32,22 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-800 p-4">
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md text-white">
-                <h2 className="text-3xl font-bold text-center mb-2">LibraryPro</h2>
-                <p className="text-center text-blue-100 mb-8">Sign in to your account</p>
+        <div className="min-h-screen flex items-center justify-center p-4 relative font-sans">
+            <Background3DEffect />
+            <div className="bg-[#170a35]/80 backdrop-blur-2xl border border-purple-400/30 p-8 md:p-10 rounded-3xl shadow-[0_30px_70px_rgba(147,51,234,0.3)] w-full max-w-md text-white transition-transform duration-300 hover:border-fuchsia-400/50">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-indigo-600 flex items-center justify-center text-3xl font-black shadow-lg shadow-fuchsia-500/40 border border-fuchsia-300/40">
+                    LP
+                </div>
+                <h2 className="text-3xl font-black text-center mb-2 bg-gradient-to-r from-fuchsia-300 via-purple-200 to-pink-300 text-transparent bg-clip-text">LibraryPro</h2>
+                <p className="text-center text-purple-200/80 text-sm mb-8 font-medium">Sign in to your 3D Executive Dashboard</p>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-medium text-blue-100 mb-1">Email</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-purple-200 mb-2">Email Address</label>
                         <input
                             type="email"
                             required
-                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all placeholder-blue-200/50 text-white"
+                            className="w-full px-4 py-3.5 rounded-xl bg-purple-950/50 border border-purple-400/30 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-500/40 outline-none transition-all placeholder-purple-300/40 text-white text-sm"
                             placeholder="bhendavade@library.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -50,11 +55,11 @@ const Login = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-blue-100 mb-1">Password</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-purple-200 mb-2">Password</label>
                         <input
                             type="password"
                             required
-                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-blue-300/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all placeholder-blue-200/50 text-white"
+                            className="w-full px-4 py-3.5 rounded-xl bg-purple-950/50 border border-purple-400/30 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-500/40 outline-none transition-all placeholder-purple-300/40 text-white text-sm"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -63,13 +68,13 @@ const Login = () => {
 
                     <button
                         type="submit"
-                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02]"
+                        className="w-full py-3.5 px-4 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-fuchsia-600/30 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                     >
                         Sign In
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-xs text-blue-200/80">
+                <div className="mt-6 text-center text-xs text-purple-300/70">
                     Contact System Administrator for account access.
                 </div>
                 <DeveloperCredit />
