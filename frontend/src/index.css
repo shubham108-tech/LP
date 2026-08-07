@@ -14,6 +14,23 @@
   }
 }
 
+/* Explicit Form Control High-Contrast Legibility System */
+.bg-white input,
+.bg-white select,
+.bg-white textarea,
+.bg-slate-50 input,
+.bg-slate-50 select,
+.bg-slate-50 textarea,
+input:not(.text-white):not(.text-purple-200),
+select:not(.text-white):not(.text-purple-200),
+textarea:not(.text-white):not(.text-purple-200) {
+  color: #0f172a !important;
+}
+
+input::placeholder, select::placeholder, textarea::placeholder {
+  color: #64748b !important;
+}
+
 /* 3D Keyframe Animations for Floating Geometric Elements */
 @keyframes floatSlow {
   0%, 100% {
@@ -50,7 +67,7 @@
 .bg-white.shadow-sm,
 .bg-white.shadow-md,
 .bg-white.border {
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border: 1.5px solid rgba(192, 132, 252, 0.45) !important;

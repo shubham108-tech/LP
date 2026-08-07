@@ -1,7 +1,7 @@
 {
   "name": "library-system-root",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "build": "node build_vercel.js",
     "vercel-build": "node build_vercel.js",

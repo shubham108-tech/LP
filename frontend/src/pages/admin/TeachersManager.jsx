@@ -427,30 +427,49 @@ const TeachersManager = () => {
 
             {/* EDIT MODAL */}
             {showEditModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                        <h2 className="text-xl font-bold text-slate-800 mb-4">Edit Teacher</h2>
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 md:p-8 border border-purple-200">
+                        <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
+                            <h2 className="text-xl font-extrabold text-slate-900">Edit Teacher Details</h2>
+                            <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+                                <RiCloseLine size={24} />
+                            </button>
+                        </div>
                         <form onSubmit={handleEditSubmit} className="space-y-4">
                             <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Full Name</label>
-                                <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5 block">Full Name</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition" 
+                                    value={formData.name} 
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                                    required 
+                                />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Email</label>
-                                <input type="email" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5 block">Email Address</label>
+                                <input 
+                                    type="email" 
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition" 
+                                    value={formData.email} 
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })} 
+                                    required 
+                                />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">New Password <span className="text-xs font-normal text-gray-400">(Leave blank to keep current)</span></label>
-                                <input type="password" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5 block">New Password <span className="text-[11px] font-normal text-slate-500">(Leave blank to keep current)</span></label>
+                                <input 
+                                    type="password" 
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition placeholder-slate-400"
                                     value={formData.password || ''}
                                     onChange={e => setFormData({ ...formData, password: e.target.value })}
                                     placeholder="Enter new password"
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Role</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5 block">Role</label>
                                 <select
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition"
                                     value={formData.role}
                                     onChange={e => setFormData({ ...formData, role: e.target.value })}
                                 >
@@ -459,9 +478,9 @@ const TeachersManager = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Department (Branch)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5 block">Department (Branch)</label>
                                 <select
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition"
                                     value={formData.branch || ''}
                                     onChange={e => setFormData({ ...formData, branch: e.target.value })}
                                 >
@@ -474,9 +493,9 @@ const TeachersManager = () => {
                                     <option value="General">General / All</option>
                                 </select>
                             </div>
-                            <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2 bg-gray-100 text-slate-600 rounded-lg hover:bg-gray-200 font-medium">Cancel</button>
-                                <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-lg">Save Changes</button>
+                            <div className="flex gap-3 pt-3">
+                                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition text-sm">Cancel</button>
+                                <button type="submit" className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-600/30 text-sm">Save Changes</button>
                             </div>
                         </form>
                     </div>
