@@ -324,17 +324,26 @@ const StationaryAdmin = () => {
         const formattedRows = dataList.map((row, idx) => {
             const qty = row.received_qty || row.issued_qty || row.quantity || 0;
             totalQty += Number(qty);
+
+            const reqDateStr = row.requested_at || row.date;
+            const reqDateTime = reqDateStr ? new Date(reqDateStr).toLocaleString() : 'N/A';
+
+            const issueDateStr = row.acted_at || (['Approved', 'Returned', 'ISSUED'].includes(row.status || row.transaction_type) ? row.date : null);
+            const issueDateTime = issueDateStr ? new Date(issueDateStr).toLocaleString() : (row.status === 'Pending' ? 'Awaiting Action' : 'N/A');
+
             return {
                 "Sr. No.": `#${idx + 1}`,
-                "Date & Time": new Date(row.date || row.requested_at || Date.now()).toLocaleString(),
-                "Bill / Ref No.": row.reference_no || row.bill_number || 'N/A',
-                "Item Name": row.item_name || 'N/A',
+                "Requisition / Ref No.": row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A'),
+                "Stationary Item Name": row.item_name || 'N/A',
                 "Category": row.category || 'N/A',
-                "Type / Status": row.transaction_type || row.status || 'N/A',
-                "Qty": `${qty} ${row.unit || 'pcs'}`,
+                "Requisition Date & Time": reqDateTime,
+                "Issue / Action Date & Time": issueDateTime,
+                "Quantity": `${qty} ${row.unit || 'pcs'}`,
                 "Stock Balance": row.balance !== undefined ? `${row.balance} ${row.unit || 'pcs'}` : 'N/A',
-                "User / Department": row.user_name || 'Admin',
-                "Notes / Reason": row.notes || row.reason || 'N/A'
+                "Teacher / User Name": row.user_name || 'Admin',
+                "User Email & Role": row.user_email ? `${row.user_email} (${row.user_role || 'User'})` : (row.user_role || 'Staff/Admin'),
+                "Status / Type": row.status || row.transaction_type || 'N/A',
+                "Reason / Notes": row.reason || row.notes || 'N/A'
             };
         });
 
@@ -352,7 +361,7 @@ const StationaryAdmin = () => {
             csvString += values.join(",") + "\r\n";
         });
 
-        csvString += `\r\n"","","","TOTAL RECORDS: ${dataList.length}","","","TOTAL QTY: ${totalQty}","","",""\r\n`;
+        csvString += `\r\n"","","","","","TOTAL RECORDS: ${dataList.length}","TOTAL QTY: ${totalQty}","","","","",""\r\n`;
 
         const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -372,26 +381,106 @@ const StationaryAdmin = () => {
         let totalQty = 0;
         let totalRecords = dataList.length;
 
-        const tableRowsHtml = dataList.map((row, idx) => {
-            const qty = row.received_qty || row.issued_qty || row.quantity || 0;
-            totalQty += Number(qty);
-            const status = row.transaction_type || row.status || 'N/A';
-            
-            let badgeClass = 'badge-amber';
-            if (['RECEIVED', 'RESTOCK', 'Approved'].includes(status)) badgeClass = 'badge-green';
-            if (['ISSUED', 'Rejected'].includes(status)) badgeClass = 'badge-red';
+        // Group data list by Stationary Item Name
+        const itemGroups = dataList.reduce((acc, row) => {
+            const itemName = row.item_name || 'General Stationary';
+            if (!acc[itemName]) {
+                acc[itemName] = {
+                    category: row.category || 'N/A',
+                    unit: row.unit || 'pcs',
+                    items: [],
+                    totalQty: 0
+                };
+            }
+            const qty = Number(row.received_qty || row.issued_qty || row.quantity || 0);
+            acc[itemName].items.push(row);
+            acc[itemName].totalQty += qty;
+            totalQty += qty;
+            return acc;
+        }, {});
+
+        const uniqueStationaryCount = Object.keys(itemGroups).length;
+        const uniqueUsersCount = new Set(dataList.map(r => r.user_name || r.user_email).filter(Boolean)).size;
+
+        const itemGroupsHtml = Object.entries(itemGroups).map(([itemName, group]) => {
+            const tableRows = group.items.map((row, idx) => {
+                const qty = row.received_qty || row.issued_qty || row.quantity || 0;
+                const status = row.status || row.transaction_type || 'N/A';
+
+                let badgeClass = 'badge-amber';
+                if (['RECEIVED', 'RESTOCK', 'Approved'].includes(status)) badgeClass = 'badge-green';
+                if (['ISSUED', 'Rejected'].includes(status)) badgeClass = 'badge-red';
+                if (['Returned'].includes(status)) badgeClass = 'badge-blue';
+
+                const reqDateStr = row.requested_at || row.date;
+                const reqDateHtml = reqDateStr ? `
+                    <div style="font-weight: 600; color: #1e293b;">📅 ${new Date(reqDateStr).toLocaleDateString()}</div>
+                    <div style="font-size: 10px; color: #64748b;">⏰ ${new Date(reqDateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                ` : 'N/A';
+
+                const issueDateStr = row.acted_at || (['Approved', 'Returned', 'ISSUED'].includes(status) ? row.date : null);
+                const issueDateHtml = issueDateStr ? `
+                    <div style="font-weight: 600; color: #15803d;">📅 ${new Date(issueDateStr).toLocaleDateString()}</div>
+                    <div style="font-size: 10px; color: #15803d;">⏰ ${new Date(issueDateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                ` : (status === 'Pending' ? '<span style="font-size: 11px; color: #b45309; font-weight: 600;">⏳ Awaiting Action</span>' : '<span style="color: #94a3b8;">-</span>');
+
+                const refNo = row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A');
+
+                return `
+                    <tr>
+                        <td style="text-align: center; font-weight: bold; color: #475569;">#${idx + 1}</td>
+                        <td><span style="font-family: monospace; font-weight: bold; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${refNo}</span></td>
+                        <td>${reqDateHtml}</td>
+                        <td>${issueDateHtml}</td>
+                        <td>
+                            <strong>${row.user_name || 'Admin'}</strong>
+                            ${row.user_email ? `<br><small style="color: #64748b;">${row.user_email} (${row.user_role || 'User'})</small>` : ''}
+                        </td>
+                        <td style="text-align: right; font-weight: 800; color: #4338ca;">${qty} ${group.unit}</td>
+                        <td style="text-align: right; font-weight: 700; color: #0f766e;">${row.balance !== undefined ? row.balance + ' ' + group.unit : '-'}</td>
+                        <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                        <td style="font-size: 11px; color: #334155;">${row.reason || row.notes || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
 
             return `
-                <tr>
-                    <td style="text-align: center; font-weight: bold;">#${idx + 1}</td>
-                    <td>${new Date(row.date || row.requested_at || Date.now()).toLocaleDateString()}<br><small style="color: #64748b;">${new Date(row.date || row.requested_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
-                    <td><span style="font-family: monospace; font-weight: bold; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${row.reference_no || row.bill_number || 'N/A'}</span></td>
-                    <td><strong>${row.item_name || 'N/A'}</strong><br><small style="color: #64748b; text-transform: uppercase;">${row.category || ''}</small></td>
-                    <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
-                    <td style="text-align: right; font-weight: bold;">${qty} ${row.unit || 'pcs'}</td>
-                    <td style="text-align: right; font-weight: bold; color: #4338ca;">${row.balance !== undefined ? row.balance + ' ' + (row.unit || 'pcs') : '-'}</td>
-                    <td><strong>${row.user_name || 'Admin'}</strong><br><small style="color: #64748b;">${row.notes || row.reason || ''}</small></td>
-                </tr>
+                <div class="item-group-box">
+                    <div class="item-group-header">
+                        <div>
+                            <span class="item-icon">📦</span>
+                            <strong class="item-title">${itemName}</strong>
+                            <span class="item-category-tag">${group.category}</span>
+                        </div>
+                        <div class="item-summary-pills">
+                            <span class="pill pill-qty">Total Qty: <strong>${group.totalQty} ${group.unit}</strong></span>
+                            <span class="pill pill-count">Requests: <strong>${group.items.length}</strong></span>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 35px; text-align: center;">Sr.</th>
+                                <th style="width: 90px;">Req / Ref No.</th>
+                                <th style="width: 110px;">Requisition Date & Time</th>
+                                <th style="width: 110px;">Issue Date & Time</th>
+                                <th>Teacher / Recipient</th>
+                                <th style="width: 80px; text-align: right;">Quantity</th>
+                                <th style="width: 75px; text-align: right;">Stock Bal</th>
+                                <th style="width: 75px; text-align: center;">Status</th>
+                                <th>Reason / Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                            <tr class="item-subtotal-row">
+                                <td colspan="5" style="text-align: right; font-weight: bold; color: #1e1b4b;">Subtotal for ${itemName}:</td>
+                                <td style="text-align: right; font-weight: 900; color: #4338ca;">${group.totalQty} ${group.unit}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             `;
         }).join('');
 
@@ -406,10 +495,11 @@ const StationaryAdmin = () => {
                 <head>
                     <title>${reportTitle} - LibraryPro Executive Report</title>
                     <style>
-                        @page { size: A4 portrait; margin: 12mm; }
+                        @page { size: A4 portrait; margin: 10mm; }
                         @media print {
                             .no-print { display: none !important; }
                             body { padding: 0; background: #fff; }
+                            .item-group-box { page-break-inside: avoid; }
                         }
                         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; color: #0f172a; background: #fff; }
                         
@@ -417,38 +507,48 @@ const StationaryAdmin = () => {
                         .btn-print { background: #4f46e5; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
                         .btn-close { background: #cbd5e1; color: #334155; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 8px; font-size: 13px; }
 
-                        /* Report Header Box */
+                        /* Report Header Banner */
                         .header-banner { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #4f46e5; padding-bottom: 12px; margin-bottom: 20px; }
                         .org-logo { font-size: 24px; font-weight: 900; color: #4338ca; letter-spacing: -0.5px; }
                         .report-heading { font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px; }
                         .report-meta { text-align: right; font-size: 12px; color: #475569; line-height: 1.5; }
                         
                         /* 3D Boxed Stat Cards */
-                        .summary-grid { display: flex; gap: 15px; margin-bottom: 20px; }
-                        .stat-card { flex: 1; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; background: #f8fafc; box-shadow: 0 4px 8px rgba(0,0,0,0.04); }
-                        .stat-title { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px; }
-                        .stat-val { font-size: 20px; font-weight: 900; color: #1e1b4b; margin-top: 4px; }
+                        .summary-grid { display: flex; gap: 12px; margin-bottom: 22px; }
+                        .stat-card { flex: 1; border: 2px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; background: #f8fafc; box-shadow: 0 4px 8px rgba(0,0,0,0.04); }
+                        .stat-title { font-size: 10px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px; }
+                        .stat-val { font-size: 18px; font-weight: 900; color: #1e1b4b; margin-top: 2px; }
 
-                        /* 3D Boxed Table */
-                        .table-wrap { border: 2px solid #cbd5e1; border-radius: 10px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+                        /* Item Group 3D Box Styling */
+                        .item-group-box { border: 2px solid #cbd5e1; border-radius: 12px; overflow: hidden; margin-bottom: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); background: #ffffff; }
+                        .item-group-header { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 10px 16px; border-bottom: 2px solid #cbd5e1; }
+                        .item-icon { font-size: 16px; margin-right: 6px; }
+                        .item-title { font-size: 15px; color: #0f172a; font-weight: 800; }
+                        .item-category-tag { font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-weight: 700; text-transform: uppercase; }
+                        .item-summary-pills { display: flex; gap: 8px; }
+                        .pill { font-size: 11px; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+                        .pill-qty { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+                        .pill-count { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
                         table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                        th { background: #0f172a; color: #ffffff; text-align: left; padding: 10px; font-weight: 700; text-transform: uppercase; font-size: 11px; border: 1px solid #1e293b; }
-                        td { padding: 9px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
+                        th { background: #0f172a; color: #ffffff; text-align: left; padding: 9px 10px; font-weight: 700; text-transform: uppercase; font-size: 11px; border: 1px solid #1e293b; }
+                        td { padding: 8px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
                         tr:nth-child(even) { background-color: #f8fafc; }
                         
                         .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
                         .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
                         .badge-red { background: #ffe4e6; color: #be123c; border: 1px solid #fca5a5; }
                         .badge-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+                        .badge-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
 
-                        .total-row td { background: #e0e7ff; color: #3730a3; font-weight: 800; font-size: 13px; border-top: 2px solid #4f46e5; }
+                        .item-subtotal-row td { background: #f1f5f9; font-size: 12px; border-top: 2px solid #cbd5e1; }
 
                         /* Signatures & Department Seal Box */
-                        .sign-container { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 15px; page-break-inside: avoid; }
+                        .sign-container { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 35px; padding-top: 15px; page-break-inside: avoid; }
                         .sign-box { width: 200px; text-align: center; border-top: 2px dashed #64748b; padding-top: 8px; font-size: 12px; font-weight: 700; color: #334155; }
-                        .stamp-box { border: 2px dashed #cbd5e1; width: 130px; height: 70px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; margin: 0 auto; text-align: center; }
+                        .stamp-box { border: 2px dashed #cbd5e1; width: 130px; height: 65px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; margin: 0 auto; text-align: center; }
                         
-                        .footer-bar { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+                        .footer-bar { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
                     </style>
                 </head>
                 <body>
@@ -469,7 +569,7 @@ const StationaryAdmin = () => {
                             <div class="report-heading">${reportTitle}</div>
                         </div>
                         <div class="report-meta">
-                            <strong>Department:</strong> Stationary & Purchase Register<br>
+                            <strong>Department:</strong> Stationary & Inventory Control<br>
                             <strong>Section:</strong> ${sectionName}<br>
                             <strong>Generated:</strong> ${new Date().toLocaleString()}
                         </div>
@@ -485,35 +585,16 @@ const StationaryAdmin = () => {
                             <div class="stat-val">${totalQty} Units</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-title">Report Type</div>
-                            <div class="stat-val" style="font-size: 15px; text-transform: capitalize;">${sectionName}</div>
+                            <div class="stat-title">Stationary Item Types</div>
+                            <div class="stat-val">${uniqueStationaryCount} Distinct Items</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">Teachers / Recipients</div>
+                            <div class="stat-val">${uniqueUsersCount} Users</div>
                         </div>
                     </div>
 
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px; text-align: center;">Sr.</th>
-                                    <th style="width: 110px;">Date & Time</th>
-                                    <th style="width: 100px;">Bill / Ref No.</th>
-                                    <th>Item & Category</th>
-                                    <th style="width: 90px; text-align: center;">Type</th>
-                                    <th style="width: 90px; text-align: right;">Quantity</th>
-                                    <th style="width: 90px; text-align: right;">Balance</th>
-                                    <th>User / Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRowsHtml}
-                                <tr class="total-row">
-                                    <td colspan="5" style="text-align: right;">TOTAL QUANTITY:</td>
-                                    <td style="text-align: right;">${totalQty}</td>
-                                    <td colspan="2"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    ${itemGroupsHtml}
 
                     <div class="sign-container">
                         <div class="sign-box">Store In-Charge / Admin</div>
