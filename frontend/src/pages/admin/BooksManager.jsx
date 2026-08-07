@@ -268,12 +268,55 @@ const BooksManager = () => {
 
     const handleExportCSV = () => {
         if (books.length === 0) return toast.error('No books to export');
-        const headers = ['Book Name', 'Author', 'Category', 'Total Quantity', 'Available Quantity'];
-        const csvContent = [headers.join(','), ...books.map(b => `"${b.book_name}","${b.author}","${b.category || ''}",${b.total_quantity},${b.available_quantity}`)].join('\n');
+
+        let csvString = "\uFEFF";
+        csvString += `"=========================================================================================="\r\n`;
+        csvString += `"LIBRARYPRO - OFFICIAL BOOKS INVENTORY REPORT"\r\n`;
+        csvString += `"Generated Date & Time:","${new Date().toLocaleString()}"\r\n`;
+        csvString += `"Total Book Titles:","${books.length}"\r\n`;
+        csvString += `"=========================================================================================="\r\n\r\n`;
+
+        const headers = ['Sr. No.', 'Book Name', 'Author', 'Category', 'Total Quantity', 'Available Quantity', 'Stock Status'];
+        csvString += headers.map(h => `"${h}"`).join(',') + '\r\n';
+
+        let totalCopies = 0;
+        let availCopies = 0;
+
+        books.forEach((b, idx) => {
+            const tot = Number(b.total_quantity || 0);
+            const avail = Number(b.available_quantity || 0);
+            totalCopies += tot;
+            availCopies += avail;
+            const status = avail > 0 ? 'Available' : 'Out of Stock';
+
+            csvString += [
+                `"#${idx + 1}"`,
+                `"${(b.book_name || '').replace(/"/g, '""')}"`,
+                `"${(b.author || '').replace(/"/g, '""')}"`,
+                `"${(b.category || 'General').replace(/"/g, '""')}"`,
+                tot,
+                avail,
+                `"${status}"`
+            ].join(',') + '\r\n';
+        });
+
+        csvString += `\r\n"=========================================================================================="\r\n`;
+        csvString += `"SUMMARY TOTALS"\r\n`;
+        csvString += `"Total Unique Titles:","${books.length}"\r\n`;
+        csvString += `"Total Inventory Copies:","${totalCopies}"\r\n`;
+        csvString += `"Total Available Copies:","${availCopies}"\r\n`;
+        csvString += `"Document Status:","Official Library Inventory Export"\r\n`;
+        csvString += `"=========================================================================================="\r\n`;
+
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
-        link.download = `books_export.csv`;
+        link.href = URL.createObjectURL(blob);
+        link.download = `library_books_inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        toast.success('Books Inventory exported to CSV!');
     };
 
     // --- Filter Logic ---

@@ -330,28 +330,46 @@ const TeacherDashboard = () => {
     };
 
     const downloadCSV = () => {
-        if (filteredBooks.length === 0) return toast.error('No books');
-        const headers = ['Book Name', 'Author', 'Category', 'Total', 'Available', 'Created At'];
-        const csvRows = [headers.join(',')];
-        filteredBooks.forEach(book => {
-            csvRows.push([
-                `"${book.book_name.replace(/"/g, '""')}"`,
-                `"${book.author.replace(/"/g, '""')}"`,
-                `"${book.category || ''}"`,
-                book.total_quantity,
-                book.available_quantity,
-                book.created_at ? new Date(book.created_at).toLocaleDateString() : ''
-            ].join(','));
+        if (!filteredBooks || filteredBooks.length === 0) return toast.error('No books to export');
+
+        let csvString = "\uFEFF";
+        csvString += `"=========================================================================================="\r\n`;
+        csvString += `"LIBRARYPRO - TEACHER CATALOG EXPORT"\r\n`;
+        csvString += `"Generated Date & Time:","${new Date().toLocaleString()}"\r\n`;
+        csvString += `"Total Catalog Titles:","${filteredBooks.length}"\r\n`;
+        csvString += `"=========================================================================================="\r\n\r\n`;
+
+        const headers = ['Sr. No.', 'Book Title', 'Author', 'Category', 'Total Copies', 'Available Copies', 'Added Date'];
+        csvString += headers.map(h => `"${h}"`).join(',') + '\r\n';
+
+        filteredBooks.forEach((book, idx) => {
+            const addedDate = book.created_at ? new Date(book.created_at).toLocaleDateString() : 'N/A';
+            csvString += [
+                `"#${idx + 1}"`,
+                `"${(book.book_name || '').replace(/"/g, '""')}"`,
+                `"${(book.author || '').replace(/"/g, '""')}"`,
+                `"${(book.category || 'General').replace(/"/g, '""')}"`,
+                book.total_quantity || 0,
+                book.available_quantity || 0,
+                `"${addedDate}"`
+            ].join(',') + '\r\n';
         });
-        const url = URL.createObjectURL(new Blob([csvRows.join('\n')], { type: 'text/csv' }));
+
+        csvString += `\r\n"=========================================================================================="\r\n`;
+        csvString += `"SUMMARY TOTALS"\r\n`;
+        csvString += `"Total Book Titles:","${filteredBooks.length}"\r\n`;
+        csvString += `"=========================================================================================="\r\n`;
+
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `library_books_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `library_catalog_${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success('Downloaded');
+        toast.success('Catalog exported to CSV!');
     };
 
     const isNewArrival = (dateString) => {

@@ -322,46 +322,62 @@ const StationaryAdmin = () => {
 
         let totalQty = 0;
         const formattedRows = dataList.map((row, idx) => {
-            const qty = row.received_qty || row.issued_qty || row.quantity || 0;
-            totalQty += Number(qty);
+            const qty = Number(row.received_qty || row.issued_qty || row.quantity || 0);
+            totalQty += qty;
 
             const reqDateStr = row.requested_at || row.date;
-            const reqDateTime = reqDateStr ? new Date(reqDateStr).toLocaleString() : 'N/A';
+            const reqDateTime = reqDateStr ? new Date(reqDateStr).toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            }) : 'N/A';
 
             const issueDateStr = row.acted_at || (['Approved', 'Returned', 'ISSUED'].includes(row.status || row.transaction_type) ? row.date : null);
-            const issueDateTime = issueDateStr ? new Date(issueDateStr).toLocaleString() : (row.status === 'Pending' ? 'Awaiting Action' : 'N/A');
+            const issueDateTime = issueDateStr ? new Date(issueDateStr).toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            }) : (row.status === 'Pending' ? 'Awaiting Action' : 'N/A');
 
             return {
                 "Sr. No.": `#${idx + 1}`,
-                "Requisition / Ref No.": row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A'),
+                "Voucher / Ref No.": row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A'),
                 "Stationary Item Name": row.item_name || 'N/A',
                 "Category": row.category || 'N/A',
                 "Requisition Date & Time": reqDateTime,
                 "Issue / Action Date & Time": issueDateTime,
-                "Quantity": `${qty} ${row.unit || 'pcs'}`,
+                "Quantity": qty,
+                "Unit": row.unit || 'pcs',
                 "Stock Balance": row.balance !== undefined ? `${row.balance} ${row.unit || 'pcs'}` : 'N/A',
-                "Teacher / User Name": row.user_name || 'Admin',
-                "User Email & Role": row.user_email ? `${row.user_email} (${row.user_role || 'User'})` : (row.user_role || 'Staff/Admin'),
-                "Status / Type": row.status || row.transaction_type || 'N/A',
+                "Teacher / Recipient": row.user_name || 'Admin',
+                "Email & Role": row.user_email ? `${row.user_email} (${row.user_role || 'User'})` : (row.user_role || 'Staff/Admin'),
+                "Status / Action": row.status || row.transaction_type || 'N/A',
                 "Reason / Notes": row.reason || row.notes || 'N/A'
             };
         });
 
         // UTF-8 BOM prefix \uFEFF for perfect Excel rendering
         let csvString = "\uFEFF";
-        csvString += `LIBRARYPRO - ${title.toUpperCase()}\r\n`;
-        csvString += `Section: ${sectionName}\r\n`;
-        csvString += `Generated Date: ${new Date().toLocaleString()}\r\n\r\n`;
+        csvString += `"=========================================================================================="\r\n`;
+        csvString += `"LIBRARYPRO - OFFICIAL MANAGEMENT REPORT"\r\n`;
+        csvString += `"Report Title:","${title.toUpperCase().replace(/"/g, '""')}"\r\n`;
+        csvString += `"Section / Department:","${sectionName.replace(/"/g, '""')}"\r\n`;
+        csvString += `"Generated Date & Time:","${new Date().toLocaleString()}"\r\n`;
+        csvString += `"Total Records:","${dataList.length}"\r\n`;
+        csvString += `"=========================================================================================="\r\n\r\n`;
 
         const keys = Object.keys(formattedRows[0]);
-        csvString += keys.join(",") + "\r\n";
+        csvString += keys.map(k => `"${k.replace(/"/g, '""')}"`).join(",") + "\r\n";
 
         formattedRows.forEach(row => {
-            const values = keys.map(k => `"${String(row[k] || '').replace(/"/g, '""')}"`);
+            const values = keys.map(k => `"${String(row[k] ?? '').replace(/"/g, '""')}"`);
             csvString += values.join(",") + "\r\n";
         });
 
-        csvString += `\r\n"","","","","","TOTAL RECORDS: ${dataList.length}","TOTAL QTY: ${totalQty}","","","","",""\r\n`;
+        csvString += `\r\n"=========================================================================================="\r\n`;
+        csvString += `"SUMMARY TOTALS"\r\n`;
+        csvString += `"Total Records Exported:","${dataList.length}"\r\n`;
+        csvString += `"Total Quantity Sum:","${totalQty}"\r\n`;
+        csvString += `"Document Status:","Official Confidential Export"\r\n`;
+        csvString += `"=========================================================================================="\r\n`;
 
         const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
