@@ -40,11 +40,23 @@ const OTPVerification = () => {
 
             // Redirect based on role
             const role = res.data.user.role;
+            let isBrowseBooksEnabled = true;
+            try {
+                const modRes = await api.get('/modules');
+                if (modRes.data && modRes.data.modules && modRes.data.modules.browse_books === false) {
+                    isBrowseBooksEnabled = false;
+                }
+            } catch (err) {
+                console.warn('Failed to fetch module status on OTP verify:', err);
+            }
+
             setTimeout(() => {
-                if (role === 'admin' || role === 'hod') {
+                if (role === 'admin') {
                     navigate('/admin/dashboard');
+                } else if (!isBrowseBooksEnabled) {
+                    navigate('/teacher/stationary');
                 } else {
-                    navigate('/teacher/dashboard'); // Or student dashboard if exists
+                    navigate('/teacher/dashboard');
                 }
             }, 1000);
 

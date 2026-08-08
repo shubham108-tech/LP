@@ -11,14 +11,27 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { SERVER_URL } from '../../config';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import EnhancedReader from '../../components/EnhancedReader';
 
 const TeacherDashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     // Tab State
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'browse');
+
+    useEffect(() => {
+        if (user?.role !== 'admin') {
+            api.get('/modules')
+                .then(res => {
+                    if (res.data && res.data.modules && res.data.modules.browse_books === false) {
+                        navigate('/teacher/stationary', { replace: true });
+                    }
+                })
+                .catch(err => console.warn('Module check error in TeacherDashboard:', err));
+        }
+    }, [user, navigate]);
 
     useEffect(() => {
         const tab = searchParams.get('tab');

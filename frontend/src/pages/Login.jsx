@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import DeveloperCredit from '../components/DeveloperCredit';
 import Background3DEffect from '../components/Background3DEffect';
 
+import api from '../services/api';
+
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,13 +19,31 @@ const Login = () => {
         try {
             const user = await login(email, password);
             toast.success('Welcome back!');
-            const targetFrom = location.state?.from;
-            if (targetFrom && targetFrom !== '/' && targetFrom !== '/login' && targetFrom !== '/register') {
-                navigate(targetFrom);
-            } else if (user.role === 'admin' || user.role === 'hod') {
+
+            if (user.role === 'admin') {
                 navigate('/admin/dashboard');
             } else {
-                navigate('/teacher/dashboard');
+                // For teacher, student, and hod
+                let isBrowseBooksEnabled = true;
+                try {
+                    const res = await api.get('/modules');
+                    if (res.data && res.data.modules && res.data.modules.browse_books === false) {
+                        isBrowseBooksEnabled = false;
+                    }
+                } catch (err) {
+                    console.warn('Failed to fetch modules status on login:', err);
+                }
+
+                if (!isBrowseBooksEnabled) {
+                    navigate('/teacher/stationary');
+                } else {
+                    const targetFrom = location.state?.from;
+                    if (targetFrom && targetFrom !== '/' && targetFrom !== '/login' && targetFrom !== '/register') {
+                        navigate(targetFrom);
+                    } else {
+                        navigate('/teacher/dashboard');
+                    }
+                }
             }
         } catch (error) {
             console.error(error);

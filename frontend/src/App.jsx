@@ -79,6 +79,35 @@ const AdminRoute = ({ children }) => {
     return user && (user.role === 'admin' || user.role === 'hod') ? children : <Navigate to="/teacher/dashboard" />;
 };
 
+import api from './services/api';
+import { useState, useEffect } from 'react';
+
+// Dynamic Index Redirect for Teacher / Student / HOD
+const TeacherIndexRedirect = () => {
+    const [targetPath, setTargetPath] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        api.get('/modules')
+            .then(res => {
+                if (!isMounted) return;
+                const mods = res.data?.modules || {};
+                if (mods['browse_books'] === false) {
+                    setTargetPath('/teacher/stationary');
+                } else {
+                    setTargetPath('/teacher/dashboard');
+                }
+            })
+            .catch(() => {
+                if (isMounted) setTargetPath('/teacher/dashboard');
+            });
+        return () => { isMounted = false; };
+    }, []);
+
+    if (!targetPath) return <PageLoader />;
+    return <Navigate to={targetPath} replace />;
+};
+
 function App() {
     return (
         <BrowserRouter>
@@ -145,7 +174,7 @@ function App() {
 
                         {/* Teacher/Student Routes */}
                         <Route path="/teacher" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                            <Route index element={<Navigate to="/teacher/dashboard" />} />
+                            <Route index element={<TeacherIndexRedirect />} />
                             <Route path="dashboard" element={<TeacherDashboard />} />
                             <Route path="history" element={<TeacherHistory />} />
                             <Route path="notes" element={<NotesManager />} />
