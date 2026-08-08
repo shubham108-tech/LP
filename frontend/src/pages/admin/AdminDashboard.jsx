@@ -107,7 +107,7 @@ const AdminDashboard = () => {
 
     const handleTestWhatsApp = async () => {
         try {
-            const res = await api.post('/api/whatsapp/test');
+            const res = await api.post('/whatsapp/test');
             toast.success(res.data.message || 'Test WhatsApp message sent to Admin!');
         } catch (error) {
             console.error('WhatsApp Test error:', error);

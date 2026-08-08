@@ -249,7 +249,7 @@ app.get(['/qr', '/api/whatsapp/qr'], (req, res) => {
 });
 
 // Endpoint to trigger test WhatsApp message to Admin
-app.post(['/api/whatsapp/test', '/api/admin/test-whatsapp'], async (req, res) => {
+app.post(['/api/whatsapp/test', '/api/admin/test-whatsapp', '/whatsapp/test', '/admin/test-whatsapp', '/api/api/whatsapp/test'], async (req, res) => {
     try {
         const { phone, message } = req.body;
         const msgText = message || `🔔 Library System Test WhatsApp Notification!\nTime: ${new Date().toLocaleString()}\nSystem status: Active & Connected!`;
