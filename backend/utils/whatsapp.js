@@ -1,76 +1,85 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcodeTerminal = require('qrcode-terminal');
-const QRCode = require('qrcode');
 const dotenv = require('dotenv');
-
 dotenv.config();
 
+let client = null;
 let latestQrRaw = null;
 let latestQrDataUrl = null;
 let isReady = false;
+let isVercel = !!process.env.VERCEL;
 
-// Initialize WhatsApp Web Client
-const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ]
-    }
-});
-
-client.on('qr', async (qr) => {
-    latestQrRaw = qr;
-    isReady = false;
-    console.log('\n==================================================');
-    console.log('📱 WHATSAPP WEB QR CODE GENERATED! SCAN WITH PHONE:');
-    console.log('==================================================');
-    qrcodeTerminal.generate(qr, { small: true });
-    console.log('Or view QR code in browser at: http://localhost:5000/qr\n');
-
+if (!isVercel) {
     try {
-        latestQrDataUrl = await QRCode.toDataURL(qr);
+        const { Client, LocalAuth } = require('whatsapp-web.js');
+        const qrcodeTerminal = require('qrcode-terminal');
+        const QRCode = require('qrcode');
+
+        client = new Client({
+            authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+            puppeteer: {
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
+            }
+        });
+
+        client.on('qr', async (qr) => {
+            latestQrRaw = qr;
+            isReady = false;
+            console.log('\n==================================================');
+            console.log('📱 WHATSAPP WEB QR CODE GENERATED! SCAN WITH PHONE:');
+            console.log('==================================================');
+            qrcodeTerminal.generate(qr, { small: true });
+            console.log('Or view QR code in browser at: http://localhost:5000/qr\n');
+
+            try {
+                latestQrDataUrl = await QRCode.toDataURL(qr);
+            } catch (err) {
+                console.error('Error generating QR DataURL:', err);
+            }
+        });
+
+        client.on('ready', () => {
+            isReady = true;
+            latestQrRaw = null;
+            latestQrDataUrl = null;
+            console.log('\n✅ WHATSAPP WEB CLIENT IS READY & CONNECTED!\n');
+        });
+
+        client.on('authenticated', () => {
+            isReady = true;
+            console.log('🔑 WhatsApp Web Client Authenticated!');
+        });
+
+        client.on('auth_failure', (msg) => {
+            console.error('❌ WhatsApp Web Auth Failure:', msg);
+        });
+
+        client.on('disconnected', (reason) => {
+            console.log('⚠️ WhatsApp Web Client Disconnected:', reason);
+            isReady = false;
+            setTimeout(() => {
+                if (client) {
+                    client.initialize().catch(err => console.error('Error re-initializing WhatsApp client:', err.message));
+                }
+            }, 5000);
+        });
+
+        client.initialize().catch(err => {
+            console.error('WhatsApp Web Client initialization error:', err.message);
+        });
     } catch (err) {
-        console.error('Error generating QR DataURL:', err);
+        console.warn('⚠️ WhatsApp Web module not available or failed to load:', err.message);
     }
-});
-
-client.on('ready', () => {
-    isReady = true;
-    latestQrRaw = null;
-    latestQrDataUrl = null;
-    console.log('\n✅ WHATSAPP WEB CLIENT IS READY & CONNECTED!\n');
-});
-
-client.on('authenticated', () => {
-    isReady = true;
-    console.log('🔑 WhatsApp Web Client Authenticated!');
-});
-
-client.on('auth_failure', (msg) => {
-    console.error('❌ WhatsApp Web Auth Failure:', msg);
-});
-
-client.on('disconnected', (reason) => {
-    console.log('⚠️ WhatsApp Web Client Disconnected:', reason);
-    isReady = false;
-    // Attempt re-initialization
-    setTimeout(() => {
-        client.initialize().catch(err => console.error('Error re-initializing WhatsApp client:', err.message));
-    }, 5000);
-});
-
-// Initialize client asynchronously
-client.initialize().catch(err => {
-    console.error('WhatsApp Web Client initialization error:', err.message);
-});
+} else {
+    console.log('ℹ️ Running on Vercel serverless environment. WhatsApp Web local daemon disabled.');
+}
 
 /**
  * Send WhatsApp Message
@@ -81,8 +90,13 @@ const sendWhatsAppMessage = async (body, targetNumber) => {
     const rawNumber = targetNumber || process.env.ADMIN_PHONE_NUMBER;
 
     if (!rawNumber) {
-        console.log('[WhatsApp Web] No phone number specified and ADMIN_PHONE_NUMBER not set in .env');
+        console.log('[WhatsApp Web] No phone number specified and ADMIN_PHONE_NUMBER not set');
         return false;
+    }
+
+    if (isVercel || !client) {
+        console.log(`[WhatsApp Web Mock] (Serverless Mode) Would send to ${rawNumber}:`, body);
+        return { success: true, mocked: true };
     }
 
     if (!isReady) {
@@ -91,9 +105,7 @@ const sendWhatsAppMessage = async (body, targetNumber) => {
     }
 
     try {
-        // Clean phone number (strip non-digits)
         let cleaned = String(rawNumber).replace(/\D/g, '');
-        // If 10 digits (India number without country code), prepend 91
         if (cleaned.length === 10) {
             cleaned = '91' + cleaned;
         }
@@ -111,10 +123,12 @@ const sendWhatsAppMessage = async (body, targetNumber) => {
 const getStatus = () => {
     return {
         isReady,
+        isVercel,
         qrDataUrl: latestQrDataUrl,
         hasQr: !!latestQrRaw
     };
 };
 
 module.exports = { sendWhatsAppMessage, getStatus };
+
 
