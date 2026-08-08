@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Link } from 'react-router-dom';
-import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine, RiExchangeLine, RiStore2Line } from 'react-icons/ri';
+import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine, RiExchangeLine, RiStore2Line, RiWhatsappLine, RiQrCodeLine } from 'react-icons/ri';
 import toast from 'react-hot-toast';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import Leaderboard from '../../components/Leaderboard';
+import WhatsAppModal from '../../components/WhatsAppModal';
 
 const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, linkTo, actionText }) => {
     const cardContent = (
@@ -47,10 +48,22 @@ const AdminDashboard = () => {
     const [topBorrowers, setTopBorrowers] = useState([]);
     const [showResetModal, setShowResetModal] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+    const [waStatus, setWaStatus] = useState({ isReady: false });
 
     useEffect(() => {
         fetchDashboardData();
+        checkWhatsAppStatus();
     }, []);
+
+    const checkWhatsAppStatus = async () => {
+        try {
+            const res = await api.get('/whatsapp/status');
+            setWaStatus(res.data);
+        } catch (e) {
+            console.error('Failed to fetch WA status', e);
+        }
+    };
 
     const fetchDashboardData = async () => {
         try {
@@ -121,11 +134,20 @@ const AdminDashboard = () => {
                 <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={handleTestWhatsApp}
-                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-all shadow-md shadow-emerald-500/20 font-semibold text-sm"
-                        title="Click to send test WhatsApp message"
+                        onClick={() => {
+                            checkWhatsAppStatus();
+                            setIsWhatsAppModalOpen(true);
+                        }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md font-semibold text-sm ${
+                            waStatus.isReady
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
+                                : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20 animate-pulse'
+                        }`}
+                        title="Click to view WhatsApp QR Code & Connection Status"
                     >
-                        <span>📱 Test WhatsApp</span>
+                        <RiWhatsappLine className="text-lg" />
+                        <span>📱 WhatsApp QR</span>
+                        <span className={`w-2.5 h-2.5 rounded-full ${waStatus.isReady ? 'bg-emerald-300' : 'bg-amber-200'}`}></span>
                     </button>
                     <Link
                         to="/admin/modules"
@@ -143,6 +165,15 @@ const AdminDashboard = () => {
                     </button>
                 </div>
             </div>
+
+            {/* WhatsApp QR Modal */}
+            <WhatsAppModal
+                isOpen={isWhatsAppModalOpen}
+                onClose={() => {
+                    setIsWhatsAppModalOpen(false);
+                    checkWhatsAppStatus();
+                }}
+            />
 
             {/* Leaderboard */}
             <Leaderboard />

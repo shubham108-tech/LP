@@ -157,6 +157,11 @@ app.use('/api/modules', require('./routes/moduleRoutes'));
 // WhatsApp Web Integration Routes
 const { getStatus: getWhatsAppStatus, sendWhatsAppMessage } = require('./utils/whatsapp');
 
+// Get WhatsApp Status JSON
+app.get(['/api/whatsapp/status', '/whatsapp/status'], (req, res) => {
+    res.json(getWhatsAppStatus());
+});
+
 // Serve WhatsApp QR Code in Browser
 app.get(['/qr', '/api/whatsapp/qr'], (req, res) => {
     const status = getWhatsAppStatus();
