@@ -105,11 +105,28 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleTestWhatsApp = async () => {
+        try {
+            const res = await api.post('/api/whatsapp/test');
+            toast.success(res.data.message || 'Test WhatsApp message sent to Admin!');
+        } catch (error) {
+            console.error('WhatsApp Test error:', error);
+            toast.error(error.response?.data?.message || 'WhatsApp QR code not scanned yet! Scan QR first.');
+        }
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleTestWhatsApp}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-all shadow-md shadow-emerald-500/20 font-semibold text-sm"
+                        title="Click to send test WhatsApp message"
+                    >
+                        <span>📱 Test WhatsApp</span>
+                    </button>
                     <Link
                         to="/admin/modules"
                         className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all shadow-md shadow-indigo-500/20 font-semibold text-sm"

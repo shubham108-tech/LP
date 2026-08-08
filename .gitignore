@@ -24,3 +24,5 @@ yarn-error.log*
 backend/uploads/
 frontend/dist/
 backend/scripts/users_output.json
+.wwebjs_auth/
+.wwebjs_cache/
