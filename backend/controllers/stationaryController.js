@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { notifyAdmins } = require('./notificationController');
+const { sendWhatsAppMessage } = require('../utils/whatsapp');
 
 // --- ITEM MANAGEMENT (Admin / HOD) ---
 
@@ -237,6 +238,16 @@ exports.requestItem = async (req, res) => {
             
             const notificationMsg = `📝 New Stationary Request: ${requesterName} requested ${quantity} ${selectedUnit} of "${itemName}".`;
             await notifyAdmins(notificationMsg, 'warning');
+
+            // Send WhatsApp Notification
+            const whatsappMsg = `📦 New Stationary Requisition Request!
+Teacher/Staff: ${requesterName}
+Item: ${itemName}
+Quantity: ${quantity} ${selectedUnit}
+Reason: ${reason || 'N/A'}
+Date: ${new Date().toLocaleString()}`;
+
+            await sendWhatsAppMessage(whatsappMsg);
         } catch (notifErr) {
             console.error('Notification error on stationary request:', notifErr);
         }

@@ -8,6 +8,8 @@ exports.getDashboardData = async (req, res) => {
         const [lost] = await db.query("SELECT COUNT(*) as count FROM book_issues WHERE status = 'lost'");
         const [damaged] = await db.query("SELECT COUNT(*) as count FROM book_issues WHERE status = 'damaged'");
         const [fines] = await db.query('SELECT SUM(fine) as totalFines FROM book_issues WHERE fine > 0');
+        const [pendingBookReqs] = await db.query("SELECT COUNT(*) as count FROM book_requests WHERE LOWER(status) = 'pending'");
+        const [pendingStatReqs] = await db.query("SELECT COUNT(*) as count FROM stationary_requests WHERE LOWER(status) = 'pending'");
 
         // Count Teachers and Students separately
         const [userStats] = await db.query(`
@@ -127,7 +129,9 @@ exports.getDashboardData = async (req, res) => {
                 totalStudents: studentCount,
                 lostBooks: lost[0]?.count || 0,
                 damagedBooks: damaged[0]?.count || 0,
-                totalFines: fines[0]?.totalFines || 0
+                totalFines: fines[0]?.totalFines || 0,
+                pendingBookRequests: pendingBookReqs[0]?.count || 0,
+                pendingStationaryRequests: pendingStatReqs[0]?.count || 0
             },
             recentActivity,
             lowStockBooks,

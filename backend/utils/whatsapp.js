@@ -87,7 +87,19 @@ if (!isVercel) {
  * @param {string} [targetNumber] Phone number in international format (e.g. 919876543210 or +919876543210). Defaults to ADMIN_PHONE_NUMBER if not passed.
  */
 const sendWhatsAppMessage = async (body, targetNumber) => {
-    const rawNumber = targetNumber || process.env.ADMIN_PHONE_NUMBER;
+    let rawNumber = targetNumber || process.env.ADMIN_PHONE_NUMBER;
+
+    if (!rawNumber) {
+        try {
+            const db = require('../config/db');
+            const [admins] = await db.query("SELECT phone_number FROM users WHERE LOWER(role) = 'admin' AND phone_number IS NOT NULL AND TRIM(phone_number) != '' LIMIT 1");
+            if (admins && admins.length > 0 && admins[0].phone_number) {
+                rawNumber = admins[0].phone_number;
+            }
+        } catch (e) {
+            console.warn('[WhatsApp Web] Admin phone lookup skipped:', e.message);
+        }
+    }
 
     if (!rawNumber) {
         console.log('[WhatsApp Web] No phone number specified and ADMIN_PHONE_NUMBER not set');

@@ -1,22 +1,33 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Link } from 'react-router-dom';
-import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine } from 'react-icons/ri';
+import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine, RiExchangeLine, RiStore2Line } from 'react-icons/ri';
 import toast from 'react-hot-toast';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import Leaderboard from '../../components/Leaderboard';
 
-const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
-    <div className="p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex items-center">
-        <div className={`p-4 rounded-xl ${bgClass} ${colorClass}`}>
-            <Icon className="text-3xl" />
+const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, linkTo, actionText }) => {
+    const cardContent = (
+        <div className="p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all border border-gray-100 flex items-center justify-between group">
+            <div className="flex items-center">
+                <div className={`p-4 rounded-xl ${bgClass} ${colorClass}`}>
+                    <Icon className="text-3xl" />
+                </div>
+                <div className="ml-5">
+                    <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{title}</h3>
+                    <p className="text-3xl font-extrabold text-slate-800 mt-1">{value}</p>
+                </div>
+            </div>
+            {linkTo && (
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    {actionText || 'View'} →
+                </span>
+            )}
         </div>
-        <div className="ml-5">
-            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{title}</h3>
-            <p className="text-3xl font-extrabold text-slate-800 mt-1">{value}</p>
-        </div>
-    </div>
-);
+    );
+
+    return linkTo ? <Link to={linkTo}>{cardContent}</Link> : cardContent;
+};
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
@@ -124,6 +135,8 @@ const AdminDashboard = () => {
                 <StatCard title="Total Books" value={stats.totalBooks} icon={RiBookLine} bgClass="bg-blue-100" colorClass="text-blue-600" />
                 <StatCard title="Available" value={stats.availableBooks} icon={RiBookOpenLine} bgClass="bg-emerald-100" colorClass="text-emerald-600" />
                 <StatCard title="Issued" value={stats.issuedBooks} icon={RiHistoryLine} bgClass="bg-orange-100" colorClass="text-orange-600" />
+                <StatCard title="Pending Book Reqs" value={stats.pendingBookRequests || 0} icon={RiExchangeLine} bgClass="bg-amber-100" colorClass="text-amber-600" linkTo="/admin/requests" actionText="Manage" />
+                <StatCard title="Pending Stationary" value={stats.pendingStationaryRequests || 0} icon={RiStore2Line} bgClass="bg-purple-100" colorClass="text-purple-600" linkTo="/admin/stationary" actionText="Manage" />
                 <StatCard title="Lost Books" value={stats.lostBooks} icon={RiCloseCircleLine} bgClass="bg-red-100" colorClass="text-red-600" />
                 <StatCard title="Damaged" value={stats.damagedBooks} icon={RiErrorWarningLine} bgClass="bg-amber-100" colorClass="text-amber-600" />
                 <StatCard title="Total Fines" value={`₹${stats.totalFines}`} icon={RiMoneyDollarCircleLine} bgClass="bg-rose-100" colorClass="text-rose-600" />

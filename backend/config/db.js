@@ -419,10 +419,51 @@ const dbWrapper = {
             else if (sqlUpper.includes('FROM BOOK_ISSUES')) table = 'book_issues';
             else if (sqlUpper.includes('FROM NOTES')) table = 'notes';
             else if (sqlUpper.includes('FROM PROJECTS')) table = 'projects';
+            else if (sqlUpper.includes('FROM NOTIFICATIONS')) table = 'notifications';
+            else if (sqlUpper.includes('FROM SYSTEM_MODULES')) table = 'system_modules';
+            else if (sqlUpper.includes('FROM FEEDBACK')) table = 'feedback';
+            else if (sqlUpper.includes('FROM SUGGESTIONS')) table = 'suggestions';
+            else if (sqlUpper.includes('FROM REVIEWS')) table = 'reviews';
 
             let items = dbData[table] || [];
 
-            if (sqlUpper.includes('WHERE EMAIL = ?') && params.length > 0) {
+            if (table === 'notifications') {
+                if (sqlUpper.includes('WHERE USER_ID = ? AND IS_READ = FALSE') && params.length > 0) {
+                    items = items.filter(n => n.user_id === Number(params[0]) && !n.is_read);
+                } else if (sqlUpper.includes('WHERE USER_ID = ?') && params.length > 0) {
+                    items = items.filter(n => n.user_id === Number(params[0]));
+                }
+            } else if (table === 'book_requests') {
+                items = items.map(r => {
+                    const u = (dbData.users || []).find(usr => usr.id === r.user_id);
+                    const b = (dbData.books || []).find(bk => bk.id === r.book_id);
+                    return {
+                        ...r,
+                        user_name: u ? u.name : (r.user_name || 'Teacher'),
+                        book_name: b ? b.book_name : (r.book_name || 'Book'),
+                        author: b ? b.author : (r.author || 'Author')
+                    };
+                });
+                if (sqlUpper.includes('WHERE R.USER_ID = ?') && params.length > 0) {
+                    items = items.filter(r => r.user_id === Number(params[0]));
+                }
+            } else if (table === 'stationary_requests') {
+                items = items.map(r => {
+                    const u = (dbData.users || []).find(usr => usr.id === r.user_id);
+                    const i = (dbData.stationary_items || []).find(itm => itm.id === r.item_id);
+                    return {
+                        ...r,
+                        user_name: u ? u.name : (r.user_name || 'User'),
+                        user_email: u ? u.email : '',
+                        user_role: u ? u.role : 'teacher',
+                        item_name: i ? i.item_name : (r.item_name || 'Item'),
+                        category: i ? i.category : (r.category || 'General')
+                    };
+                });
+                if (sqlUpper.includes('WHERE R.USER_ID = ?') && params.length > 0) {
+                    items = items.filter(r => r.user_id === Number(params[0]));
+                }
+            } else if (sqlUpper.includes('WHERE EMAIL = ?') && params.length > 0) {
                 items = items.filter(u => u.email === params[0]);
             } else if (sqlUpper.includes('WHERE ID = ?') && params.length > 0) {
                 items = items.filter(u => u.id === Number(params[0]));
@@ -433,7 +474,7 @@ const dbWrapper = {
             }
 
             if (sqlUpper.includes('COUNT(*)')) {
-                return [[{ count: items.length, 'COUNT(*)': items.length }], []];
+                return [[{ count: items.length, 'COUNT(*)': items.length, issuedBooks: items.length }], []];
             }
 
             return [JSON.parse(JSON.stringify(items)), []];
@@ -449,8 +490,30 @@ const dbWrapper = {
             else if (sqlUpper.includes('INTO BOOK_ISSUES')) table = 'book_issues';
             else if (sqlUpper.includes('INTO NOTES')) table = 'notes';
             else if (sqlUpper.includes('INTO PROJECTS')) table = 'projects';
+            else if (sqlUpper.includes('INTO NOTIFICATIONS')) table = 'notifications';
+            else if (sqlUpper.includes('INTO SYSTEM_MODULES')) table = 'system_modules';
+            else if (sqlUpper.includes('INTO FEEDBACK')) table = 'feedback';
+            else if (sqlUpper.includes('INTO SUGGESTIONS')) table = 'suggestions';
+            else if (sqlUpper.includes('INTO REVIEWS')) table = 'reviews';
 
             if (!dbData[table]) dbData[table] = [];
+
+            if (table === 'notifications' && Array.isArray(params[0]) && Array.isArray(params[0][0])) {
+                // Bulk insert for notifications
+                params[0].forEach(row => {
+                    const notifId = dbData.notifications.length > 0 ? Math.max(...dbData.notifications.map(i => i.id || 0)) + 1 : 1;
+                    dbData.notifications.push({
+                        id: notifId,
+                        user_id: Number(row[0]),
+                        message: row[1],
+                        type: row[2] || 'info',
+                        is_read: Boolean(row[3]),
+                        created_at: new Date().toISOString()
+                    });
+                });
+                savePureJsData();
+                return [{ insertId: dbData.notifications.length, affectedRows: params[0].length }, []];
+            }
 
             const newId = dbData[table].length > 0 ? Math.max(...dbData[table].map(i => i.id || 0)) + 1 : 1;
             let newItem = { id: newId, created_at: new Date().toISOString() };
@@ -470,6 +533,27 @@ const dbWrapper = {
                 newItem.available_quantity = params[4] !== undefined ? parseInt(params[4]) : newItem.total_quantity;
                 newItem.image_url = params[5] || null;
                 newItem.pdf_url = params[6] || null;
+            } else if (table === 'book_requests') {
+                newItem.user_id = Number(params[0]);
+                newItem.book_id = Number(params[1]);
+                newItem.status = params[2] || 'pending';
+                newItem.reason = params[3] || null;
+                newItem.reference_link = params[4] || null;
+                newItem.request_date = new Date().toISOString();
+            } else if (table === 'stationary_requests') {
+                newItem.user_id = Number(params[0]);
+                newItem.item_id = Number(params[1]);
+                newItem.quantity = Number(params[2]);
+                newItem.unit = params[3] || 'pcs';
+                newItem.reason = params[4] || null;
+                newItem.status = 'Pending';
+                newItem.requested_at = new Date().toISOString();
+            } else if (table === 'notifications') {
+                newItem.user_id = Number(params[0]);
+                newItem.message = params[1] || '';
+                newItem.type = params[2] || 'info';
+                newItem.is_read = params[3] ? Boolean(params[3]) : false;
+                newItem.created_at = new Date().toISOString();
             } else {
                 newItem.params = params;
             }
@@ -481,7 +565,12 @@ const dbWrapper = {
         }
 
         if (sqlUpper.startsWith('UPDATE')) {
-            if (sqlUpper.includes('UPDATE BOOKS') && params.length > 0) {
+            if (sqlUpper.includes('UPDATE NOTIFICATIONS SET IS_READ = TRUE') && params.length > 0) {
+                const uid = Number(params[0]);
+                (dbData.notifications || []).forEach(n => {
+                    if (n.user_id === uid) n.is_read = true;
+                });
+            } else if (sqlUpper.includes('UPDATE BOOKS') && params.length > 0) {
                 const bookId = Number(params[params.length - 1]);
                 const idx = dbData.books.findIndex(b => b.id === bookId);
                 if (idx !== -1) {
