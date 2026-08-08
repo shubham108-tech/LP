@@ -154,6 +154,124 @@ app.use('/api/gamification', require('./routes/gamificationRoutes'));
 app.use('/api/stationary', require('./routes/stationaryRoutes'));
 app.use('/api/modules', require('./routes/moduleRoutes'));
 
+// WhatsApp Web Integration Routes
+const { getStatus: getWhatsAppStatus, sendWhatsAppMessage } = require('./utils/whatsapp');
+
+// Serve WhatsApp QR Code in Browser
+app.get(['/qr', '/api/whatsapp/qr'], (req, res) => {
+    const status = getWhatsAppStatus();
+    if (status.isReady) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>WhatsApp Status - Connected</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
+                    .card { background: #1e293b; padding: 2.5rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); max-width: 400px; border: 1px solid #334155; }
+                    .icon { font-size: 4rem; margin-bottom: 1rem; }
+                    h2 { color: #22c55e; margin-top: 0; }
+                    p { color: #94a3b8; line-height: 1.5; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon">✅</div>
+                    <h2>WhatsApp Connected!</h2>
+                    <p>Aapka WhatsApp successfully authenticated aur backend server se linked hai.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    if (!status.qrDataUrl) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>WhatsApp QR - Generating...</title>
+                <meta http-equiv="refresh" content="3">
+                <style>
+                    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
+                    .card { background: #1e293b; padding: 2rem; border-radius: 1rem; max-width: 400px; border: 1px solid #334155; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>⌛ Generating WhatsApp QR Code...</h2>
+                    <p>Please wait 3 seconds, page will auto-refresh.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Scan WhatsApp QR Code</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="refresh" content="10">
+            <style>
+                body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
+                .card { background: #1e293b; padding: 2rem; border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); max-width: 420px; border: 1px solid #334155; }
+                h2 { color: #38bdf8; margin-top: 0; margin-bottom: 0.5rem; }
+                p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; }
+                .qr-container { background: white; padding: 1rem; border-radius: 1rem; display: inline-block; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+                img { width: 260px; height: 260px; display: block; }
+                .instructions { text-align: left; background: #0f172a; padding: 1rem; border-radius: 0.75rem; margin-top: 1.5rem; font-size: 0.85rem; color: #cbd5e1; border: 1px solid #334155; }
+                .instructions ol { margin: 0; padding-left: 1.2rem; }
+                .instructions li { margin-bottom: 0.4rem; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>📱 Scan WhatsApp QR Code</h2>
+                <p>Scan this QR code to connect WhatsApp Notifications to the Library System.</p>
+                <div class="qr-container">
+                    <img src="${status.qrDataUrl}" alt="WhatsApp QR Code" />
+                </div>
+                <div class="instructions">
+                    <ol>
+                        <li>Apne mobile me <b>WhatsApp</b> open karein.</li>
+                        <li><b>Settings</b> ya 3-Dots Menu par tap karein.</li>
+                        <li><b>Linked Devices (लिंक किए गए डिवाइस)</b> par click karein.</li>
+                        <li><b>Link a Device</b> button daba kar is QR code ko scan karein.</li>
+                    </ol>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+// Endpoint to trigger test WhatsApp message to Admin
+app.post(['/api/whatsapp/test', '/api/admin/test-whatsapp'], async (req, res) => {
+    try {
+        const { phone, message } = req.body;
+        const msgText = message || `🔔 Library System Test WhatsApp Notification!\nTime: ${new Date().toLocaleString()}\nSystem status: Active & Connected!`;
+        const target = phone || process.env.ADMIN_PHONE_NUMBER;
+
+        const result = await sendWhatsAppMessage(msgText, target);
+        if (result) {
+            res.json({ status: 'success', message: 'Test WhatsApp message sent successfully!', target });
+        } else {
+            const status = getWhatsAppStatus();
+            res.status(400).json({
+                status: 'error',
+                message: status.isReady ? 'Failed to send WhatsApp message' : 'WhatsApp Client is not ready or QR Code is not scanned yet.',
+                whatsappStatus: status
+            });
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: err.message });
+    }
+});
+
+
 
 // ===================================================
 // ✅ ADDED: React Frontend Serve Karne Ka Code
