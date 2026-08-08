@@ -10,8 +10,28 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
 
     const fetchStatus = async () => {
         try {
-            const res = await api.get('/whatsapp/status');
-            setStatus(res.data);
+            let data = null;
+            try {
+                const res = await api.get('/whatsapp/status');
+                data = res.data;
+            } catch (e) {
+                console.warn('Main API whatsapp status failed, checking local backend...', e.message);
+            }
+
+            // If main API returned Vercel or empty QR, check local backend on 5000 directly
+            if (!data || data.isVercel || (!data.isReady && !data.qrDataUrl)) {
+                try {
+                    const localRes = await fetch('http://localhost:5000/api/whatsapp/status');
+                    const localData = await localRes.json();
+                    if (localData && (localData.isReady || localData.qrDataUrl)) {
+                        data = { ...localData, isLocalFallback: true };
+                    }
+                } catch (localErr) {
+                    // Local backend 5000 not reachable
+                }
+            }
+
+            setStatus(data || { isReady: false, isVercel: true, qrDataUrl: null });
             setLoading(false);
         } catch (err) {
             console.error('WhatsApp status error:', err);
@@ -30,10 +50,26 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
     const handleTestMessage = async () => {
         setSendingTest(true);
         try {
-            const res = await api.post('/whatsapp/test');
-            toast.success(res.data.message || 'Test WhatsApp message sent successfully!');
+            let messageText = 'Test WhatsApp message sent successfully!';
+            if (status?.isLocalFallback) {
+                const rawRes = await fetch('http://localhost:5000/api/whatsapp/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const resData = await rawRes.json();
+                if (rawRes.ok && resData.status === 'success') {
+                    messageText = resData.message || messageText;
+                } else {
+                    throw new Error(resData.message || 'WhatsApp QR code not scanned yet!');
+                }
+            } else {
+                const res = await api.post('/whatsapp/test');
+                messageText = res.data.message || messageText;
+            }
+            toast.success(messageText);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'WhatsApp QR Code not scanned yet!');
+            toast.error(err.message || err.response?.data?.message || 'WhatsApp QR Code not scanned yet!');
         } finally {
             setSendingTest(false);
         }
@@ -42,7 +78,11 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
     const handleReset = async () => {
         try {
             toast.loading('Generating fresh QR Code...', { id: 'wa-reset' });
-            await api.post('/whatsapp/reset');
+            if (status?.isLocalFallback) {
+                await fetch('http://localhost:5000/api/whatsapp/reset', { method: 'POST' });
+            } else {
+                await api.post('/whatsapp/reset');
+            }
             setTimeout(() => {
                 toast.success('Fresh QR Code generated!', { id: 'wa-reset' });
                 fetchStatus();
@@ -125,7 +165,27 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
                                 <p className="text-slate-500 text-xs">Scan this QR code using WhatsApp on your phone to link notifications.</p>
                             </div>
 
-                             {/* QR Image Box */}
+                            {status?.isVercel && !status?.isLocalFallback && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-4 text-xs text-amber-900 flex items-start gap-2.5">
+                                    <span className="text-base mt-0.5">☁️</span>
+                                    <div>
+                                        <p className="font-bold">Online Cloud Backend (Vercel Mode)</p>
+                                        <p className="text-[11px] text-amber-800 mt-0.5">
+                                            WhatsApp Web daemon runs on your computer backend (`http://localhost:5000`).
+                                        </p>
+                                        <a
+                                            href="http://localhost:5000/qr"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-block mt-2 font-bold px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition text-[11px]"
+                                        >
+                                            🔗 Open Local QR (`http://localhost:5000/qr`) ↗
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* QR Image Box */}
                             <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center my-3 relative flex flex-col items-center justify-center min-h-[220px]">
                                 {status?.qrDataUrl ? (
                                     <div className="bg-white p-3 rounded-xl shadow-md border border-slate-100">
