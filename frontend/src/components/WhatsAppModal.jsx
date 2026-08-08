@@ -39,6 +39,19 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
         }
     };
 
+    const handleReset = async () => {
+        try {
+            toast.loading('Generating fresh QR Code...', { id: 'wa-reset' });
+            await api.post('/whatsapp/reset');
+            setTimeout(() => {
+                toast.success('Fresh QR Code generated!', { id: 'wa-reset' });
+                fetchStatus();
+            }, 3000);
+        } catch (err) {
+            toast.error('Failed to reset WhatsApp client', { id: 'wa-reset' });
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -112,16 +125,22 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
                                 <p className="text-slate-500 text-xs">Scan this QR code using WhatsApp on your phone to link notifications.</p>
                             </div>
 
-                            {/* QR Image Box */}
+                             {/* QR Image Box */}
                             <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center my-3 relative flex flex-col items-center justify-center min-h-[220px]">
                                 {status?.qrDataUrl ? (
                                     <div className="bg-white p-3 rounded-xl shadow-md border border-slate-100">
                                         <img src={status.qrDataUrl} alt="WhatsApp QR Code" className="w-48 h-48 block" />
                                     </div>
                                 ) : (
-                                    <div className="py-8 text-slate-400">
+                                    <div className="py-6 text-slate-500">
                                         <RiRefreshLine className="animate-spin text-3xl m-auto mb-2 text-emerald-600" />
-                                        <p className="text-xs font-medium">Generating QR Code...</p>
+                                        <p className="text-xs font-medium mb-3">Generating QR Code...</p>
+                                        <button
+                                            onClick={handleReset}
+                                            className="px-3 py-1.5 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold rounded-lg text-xs transition"
+                                        >
+                                            🔄 Generate Fresh QR Code
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -137,18 +156,18 @@ const WhatsAppModal = ({ isOpen, onClose }) => {
                                 </ol>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 <button
-                                    onClick={fetchStatus}
-                                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                                    onClick={handleReset}
+                                    className="py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
                                 >
-                                    <RiRefreshLine /> Refresh Status
+                                    <RiRefreshLine /> Fresh QR Code
                                 </button>
                                 <button
                                     onClick={handleTestMessage}
-                                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                                    className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
                                 >
-                                    <RiSendPlaneLine /> Test Notification
+                                    <RiSendPlaneLine /> Test WhatsApp
                                 </button>
                             </div>
                         </div>

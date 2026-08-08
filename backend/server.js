@@ -155,11 +155,21 @@ app.use('/api/stationary', require('./routes/stationaryRoutes'));
 app.use('/api/modules', require('./routes/moduleRoutes'));
 
 // WhatsApp Web Integration Routes
-const { getStatus: getWhatsAppStatus, sendWhatsAppMessage } = require('./utils/whatsapp');
+const { getStatus: getWhatsAppStatus, sendWhatsAppMessage, resetWhatsApp } = require('./utils/whatsapp');
 
 // Get WhatsApp Status JSON
 app.get(['/api/whatsapp/status', '/whatsapp/status'], (req, res) => {
     res.json(getWhatsAppStatus());
+});
+
+// Reset WhatsApp Client & Generate Fresh QR Code
+app.post(['/api/whatsapp/reset', '/whatsapp/reset'], async (req, res) => {
+    try {
+        const result = await resetWhatsApp();
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Serve WhatsApp QR Code in Browser

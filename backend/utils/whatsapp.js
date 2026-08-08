@@ -7,7 +7,12 @@ let latestQrDataUrl = null;
 let isReady = false;
 let isVercel = !!process.env.VERCEL;
 
-if (!isVercel) {
+const initWhatsAppClient = () => {
+    if (isVercel) {
+        console.log('ℹ️ Running on Vercel serverless environment. WhatsApp Web local daemon disabled.');
+        return;
+    }
+
     try {
         const { Client, LocalAuth } = require('whatsapp-web.js');
         const qrcodeTerminal = require('qrcode-terminal');
@@ -77,9 +82,25 @@ if (!isVercel) {
     } catch (err) {
         console.warn('⚠️ WhatsApp Web module not available or failed to load:', err.message);
     }
-} else {
-    console.log('ℹ️ Running on Vercel serverless environment. WhatsApp Web local daemon disabled.');
-}
+};
+
+initWhatsAppClient();
+
+const resetWhatsApp = async () => {
+    isReady = false;
+    latestQrRaw = null;
+    latestQrDataUrl = null;
+    if (client) {
+        try {
+            await client.destroy();
+        } catch (e) {
+            console.log('Error destroying client:', e.message);
+        }
+        client = null;
+    }
+    initWhatsAppClient();
+    return { success: true, message: 'WhatsApp client reset. Generating fresh QR code...' };
+};
 
 /**
  * Send WhatsApp Message
@@ -141,6 +162,6 @@ const getStatus = () => {
     };
 };
 
-module.exports = { sendWhatsAppMessage, getStatus };
+module.exports = { sendWhatsAppMessage, getStatus, resetWhatsApp };
 
 
