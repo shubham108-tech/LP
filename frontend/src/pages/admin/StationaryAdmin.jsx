@@ -15,6 +15,25 @@ import {
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
+const ExportButtonsGroup = ({ title, dataList, sectionName, exportDataToCSV, generatePDFReport }) => (
+    <div className="flex items-center gap-2">
+        <button
+            onClick={() => exportDataToCSV(title, dataList, sectionName)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition whitespace-nowrap"
+            title="Export Excel-optimized CSV"
+        >
+            <RiFileExcel2Line size={15} /> Export CSV
+        </button>
+        <button
+            onClick={() => generatePDFReport(title, dataList, sectionName)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
+            title="Generate 3D Boxed PDF / Print Report"
+        >
+            <RiPrinterLine size={15} /> PDF / Print Report
+        </button>
+    </div>
+);
+
 const StationaryAdmin = () => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
@@ -637,24 +656,7 @@ const StationaryAdmin = () => {
         }, 300);
     };
 
-    const ExportButtonsGroup = ({ title, dataList, sectionName }) => (
-        <div className="flex items-center gap-2">
-            <button
-                onClick={() => exportDataToCSV(title, dataList, sectionName)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition whitespace-nowrap"
-                title="Export Excel-optimized CSV"
-            >
-                <RiFileExcel2Line size={15} /> Export CSV
-            </button>
-            <button
-                onClick={() => generatePDFReport(title, dataList, sectionName)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
-                title="Generate 3D Boxed PDF / Print Report"
-            >
-                <RiPrinterLine size={15} /> PDF / Print Report
-            </button>
-        </div>
-    );
+    // ExportButtonsGroup is defined at module level above
 
     const filteredItems = useMemo(() => {
         if (!inventorySearch) return items;
@@ -936,6 +938,8 @@ const StationaryAdmin = () => {
                             title="Teacher Requisition Requests"
                             dataList={requests}
                             sectionName="Requisitions"
+                            exportDataToCSV={exportDataToCSV}
+                            generatePDFReport={generatePDFReport}
                         />
                     </div>
                     <div className="overflow-x-auto">
@@ -1075,6 +1079,8 @@ const StationaryAdmin = () => {
                                 title="Stationary Issue & Dispatch Register"
                                 dataList={filteredLedger.filter(row => row.transaction_type === 'ISSUED' || row.transaction_type === 'RETURNED')}
                                 sectionName="Issue & Dispatch Logs"
+                                exportDataToCSV={exportDataToCSV}
+                                generatePDFReport={generatePDFReport}
                             />
                         </div>
                     </div>
@@ -1192,6 +1198,8 @@ const StationaryAdmin = () => {
                                 title="Admin Purchase & Restock Register"
                                 dataList={filteredLedger.filter(row => row.transaction_type === 'RECEIVED' || row.transaction_type === 'RESTOCK')}
                                 sectionName="Purchase Register"
+                                exportDataToCSV={exportDataToCSV}
+                                generatePDFReport={generatePDFReport}
                             />
                         </div>
                     </div>
@@ -1560,6 +1568,8 @@ const StationaryReports = () => {
                             title={`Consumption Report - ${userDetails.user.name}`}
                             dataList={userDetails.details}
                             sectionName="Teacher Analytics"
+                            exportDataToCSV={exportDataToCSV}
+                            generatePDFReport={generatePDFReport}
                         />
                         <button
                             onClick={() => setSelectedUser(null)}
