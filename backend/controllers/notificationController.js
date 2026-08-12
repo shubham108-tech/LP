@@ -3,7 +3,10 @@ const db = require('../config/db');
 // Create a new notification
 exports.createNotification = async (userId, message, type = 'info') => {
     try {
-        await db.query('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [userId, message, type]);
+        await db.query(
+            'INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)',
+            [userId, message, type]
+        );
     } catch (error) {
         console.error('Error creating notification:', error);
     }
@@ -14,8 +17,12 @@ exports.notifyAdmins = async (message, type = 'info') => {
     try {
         const [admins] = await db.query("SELECT id FROM users WHERE LOWER(role) = 'admin' OR LOWER(role) = 'hod'");
         if (admins && admins.length > 0) {
-            const values = admins.map(admin => [admin.id, message, type, false]);
-            await db.query('INSERT INTO notifications (user_id, message, type, is_read) VALUES ?', [values]);
+            for (const admin of admins) {
+                await db.query(
+                    'INSERT INTO notifications (user_id, message, type, is_read) VALUES (?, ?, ?, ?)',
+                    [admin.id, message, type, false]
+                );
+            }
         }
     } catch (error) {
         console.error('Error sending admin notification:', error);

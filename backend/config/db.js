@@ -205,11 +205,14 @@ async function initPgSchema() {
             CREATE TABLE IF NOT EXISTS notifications (
                 id SERIAL PRIMARY KEY,
                 user_id INT NOT NULL,
-                title VARCHAR(255) NOT NULL,
+                title VARCHAR(255),
                 message TEXT,
+                type VARCHAR(50) DEFAULT 'info',
                 is_read BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'info';
+            ALTER TABLE notifications ALTER COLUMN title DROP NOT NULL;
 
             CREATE TABLE IF NOT EXISTS feedback (
                 id SERIAL PRIMARY KEY,
