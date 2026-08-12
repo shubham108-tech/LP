@@ -4,12 +4,13 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import DeveloperCredit from '../components/DeveloperCredit';
 import Background3DEffect from '../components/Background3DEffect';
-
+import { RiEyeLine, RiEyeOffLine } from 'react-icons/ri';
 import api from '../services/api';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -76,14 +77,25 @@ const Login = () => {
 
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-purple-200 mb-2">Password</label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full px-4 py-3.5 rounded-xl bg-purple-950/50 border border-purple-400/30 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-500/40 outline-none transition-all placeholder-purple-300/40 text-white text-sm"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                required
+                                className="w-full px-4 py-3.5 pr-12 rounded-xl bg-purple-950/50 border border-purple-400/30 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-500/40 outline-none transition-all placeholder-purple-300/40 text-white text-sm"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple-300/60 hover:text-fuchsia-400 transition-colors"
+                                tabIndex={-1}
+                                title={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? <RiEyeOffLine size={18} /> : <RiEyeLine size={18} />}
+                            </button>
+                        </div>
                     </div>
 
                     <button
