@@ -1497,17 +1497,54 @@ const StationaryReports = () => {
         }
     };
 
-    // User-wise Top Consumption Graph Data ("Kisne kya use kiya jada")
+    // User-wise Top Consumption Graph Data
+    const ITEM_COLORS = [
+        '#6366f1','#f59e0b','#10b981','#ec4899','#14b8a6','#ef4444',
+        '#8b5cf6','#f97316','#0ea5e9','#84cc16','#e11d48','#06b6d4'
+    ];
+
+    const itemColorMap = useMemo(() => {
+        if (!reportsData.reports) return {};
+        const uniqueItems = [...new Set(
+            reportsData.reports.map(r => r.top_item).filter(Boolean)
+        )];
+        const map = {};
+        uniqueItems.forEach((item, idx) => {
+            map[item] = ITEM_COLORS[idx % ITEM_COLORS.length];
+        });
+        return map;
+    }, [reportsData]);
+
     const topUserConsumptionChart = useMemo(() => {
         if (!reportsData.reports || !reportsData.reports.length) return [];
         return reportsData.reports
             .map(r => ({
                 name: r.user_name,
-                total: Number(r.total_items_consumed || 0)
+                total: Number(r.total_items_consumed || 0),
+                topItem: r.top_item || 'Unknown',
+                color: itemColorMap[r.top_item] || '#94a3b8'
             }))
             .filter(r => r.total > 0)
             .sort((a, b) => b.total - a.total)
             .slice(0, 8);
+    }, [reportsData, itemColorMap]);
+
+    // Users grouped by their top item
+    const groupedByTopItem = useMemo(() => {
+        if (!reportsData.reports) return {};
+        const groups = {};
+        reportsData.reports
+            .filter(r => Number(r.total_items_consumed || 0) > 0)
+            .forEach(r => {
+                const key = r.top_item || 'Other';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(r);
+            });
+        // sort each group by consumption desc
+        Object.keys(groups).forEach(k => {
+            groups[k].sort((a, b) => b.total_items_consumed - a.total_items_consumed);
+        });
+        return groups;
     }, [reportsData]);
 
     // Top Consumed Items Chart Data
@@ -1624,12 +1661,13 @@ const StationaryReports = () => {
         <div className="space-y-6">
             {/* Graphs Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Graph 1: Who used what the most (Top Consuming Users) */}
+                {/* Graph 1: Top Consuming Users — bars colored by top_item */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <h2 className="text-md font-bold text-slate-800 mb-1 flex items-center gap-2">
                         <RiUserSmileLine className="text-fuchsia-600" />
-                        Top Users by Consumption ("Kisne Kya Use Kiya Jada")
+                        Top Users by Consumption
                     </h2>
+                    <p className="text-xs text-slate-400 mb-3">Bar color represents each user's most-used item</p>
                     <div className="h-64 w-full">
                         {topUserConsumptionChart.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -1637,8 +1675,27 @@ const StationaryReports = () => {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} interval={0} angle={-15} textAnchor="end" />
                                     <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                                    <Tooltip cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="total" fill="#c026d3" radius={[6, 6, 0, 0]} name="Total Items Consumed" />
+                                    <Tooltip
+                                        cursor={{ fill: '#f8fafc' }}
+                                        content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                                const d = payload[0].payload;
+                                                return (
+                                                    <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs">
+                                                        <p className="font-bold text-slate-800 mb-1">{d.name}</p>
+                                                        <p className="text-slate-500">Total Consumed: <span className="font-bold text-slate-800">{d.total}</span></p>
+                                                        <p className="mt-1">Top Item: <span className="font-bold" style={{ color: d.color }}>{d.topItem}</span></p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
+                                    />
+                                    <Bar dataKey="total" radius={[6, 6, 0, 0]} name="Total Items Consumed">
+                                        {topUserConsumptionChart.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -1647,6 +1704,17 @@ const StationaryReports = () => {
                             </div>
                         )}
                     </div>
+                    {/* Color Legend */}
+                    {Object.keys(itemColorMap).length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {Object.entries(itemColorMap).map(([item, color]) => (
+                                <span key={item} className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                                    {item}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Graph 2: Top Consumed Stationary Items */}
@@ -1686,7 +1754,7 @@ const StationaryReports = () => {
                                 <th className="p-3 text-center">Total Req.</th>
                                 <th className="p-3 text-center">Approved</th>
                                 <th className="p-3 text-center font-bold text-indigo-600">Total Consumed</th>
-                                <th className="p-3">Top Consumed Item</th>
+                                <th className="p-3">Top Item Used</th>
                                 <th className="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -1700,7 +1768,17 @@ const StationaryReports = () => {
                                     <td className="p-3 text-center font-bold text-slate-600">{report.total_requests}</td>
                                     <td className="p-3 text-center font-bold text-emerald-600">{report.approved_requests}</td>
                                     <td className="p-3 text-center font-black text-indigo-700 text-base">{report.total_items_consumed}</td>
-                                    <td className="p-3 text-xs font-semibold text-slate-700">{report.top_item || '-'}</td>
+                                    <td className="p-3">
+                                        {report.top_item ? (
+                                            <span
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white"
+                                                style={{ backgroundColor: itemColorMap[report.top_item] || '#94a3b8' }}
+                                            >
+                                                <span className="w-1.5 h-1.5 bg-white/60 rounded-full" />
+                                                {report.top_item}
+                                            </span>
+                                        ) : <span className="text-slate-300 text-xs">—</span>}
+                                    </td>
                                     <td className="p-3 text-right space-x-2">
                                         <button
                                             onClick={() => fetchTeacherDetails(report.user_id)}
@@ -1730,6 +1808,61 @@ const StationaryReports = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Users Grouped by Top Item */}
+            {Object.keys(groupedByTopItem).length > 0 && (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 className="text-lg font-bold text-slate-800 mb-1">Users Grouped by Most-Used Item</h2>
+                    <p className="text-xs text-slate-400 mb-5">Each group shows users whose most-consumed item is the same</p>
+                    <div className="space-y-5">
+                        {Object.entries(groupedByTopItem)
+                            .sort((a, b) => b[1].length - a[1].length)
+                            .map(([item, users]) => {
+                                const color = itemColorMap[item] || '#94a3b8';
+                                return (
+                                    <div key={item}>
+                                        {/* Item Header */}
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span
+                                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-bold text-white shadow-sm"
+                                                style={{ backgroundColor: color }}
+                                            >
+                                                <span className="w-2 h-2 bg-white/50 rounded-full" />
+                                                {item}
+                                            </span>
+                                            <span className="text-xs text-slate-400">{users.length} user{users.length > 1 ? 's' : ''}</span>
+                                            <div className="flex-1 h-px bg-slate-100" />
+                                        </div>
+                                        {/* Users under this item */}
+                                        <div className="flex flex-wrap gap-3">
+                                            {users.map(u => (
+                                                <div
+                                                    key={u.user_id}
+                                                    className="flex items-center gap-3 bg-slate-50 border rounded-xl px-4 py-2.5 cursor-pointer hover:shadow-md transition"
+                                                    style={{ borderColor: color + '44' }}
+                                                    onClick={() => fetchTeacherDetails(u.user_id)}
+                                                    title="Click to view details"
+                                                >
+                                                    <div
+                                                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                                        style={{ backgroundColor: color }}
+                                                    >
+                                                        {u.user_name?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-slate-800">{u.user_name}</p>
+                                                        <p className="text-xs text-slate-400">{u.total_items_consumed} items consumed</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        }
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
