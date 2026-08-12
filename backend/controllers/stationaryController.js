@@ -568,65 +568,135 @@ exports.deleteLedger = async (req, res) => {
 // Get summary reports, user statistics, top consumed items graph data
 exports.getAdminReports = async (req, res) => {
     try {
-        // 1. User Summary Reports
-        const userSummaryQuery = `
-            SELECT 
-                u.id as user_id, 
-                u.name as user_name, 
-                u.email as user_email,
-                u.role as user_role,
-                u.stationary_blocked as is_blocked,
-                COUNT(r.id) as total_requests,
-                SUM(CASE WHEN r.status = 'Approved' THEN 1 ELSE 0 END) as approved_requests,
-                SUM(CASE WHEN r.status = 'Approved' THEN r.quantity ELSE 0 END) as total_items_consumed,
-                (
-                    SELECT GROUP_CONCAT(CONCAT(i.item_name, ' (', item_totals.total_qty, ')') SEPARATOR ', ')
-                    FROM (
-                        SELECT r2.item_id, SUM(r2.quantity) as total_qty
-                        FROM stationary_requests r2
-                        WHERE r2.user_id = u.id AND r2.status = 'Approved'
-                        GROUP BY r2.item_id
-                    ) item_totals
-                    JOIN stationary_items i ON item_totals.item_id = i.id
-                ) AS detailed_consumption,
-                MAX(r.requested_at) as last_request_date,
-                (
-                    SELECT CONCAT(i.item_name, ' (', SUM(r2.quantity), ')')
-                    FROM stationary_requests r2
-                    JOIN stationary_items i ON r2.item_id = i.id
-                    WHERE r2.user_id = u.id AND r2.status = 'Approved'
-                    GROUP BY i.item_name
-                    ORDER BY SUM(r2.quantity) DESC
-                    LIMIT 1
-                ) AS top_item
-            FROM users u
-            JOIN stationary_requests r ON u.id = r.user_id
-            GROUP BY u.id, u.name, u.email, u.role, u.stationary_blocked
-            ORDER BY total_items_consumed DESC, last_request_date DESC
-        `;
-        const [reports] = await db.query(userSummaryQuery);
+        // Fetch users
+        const [users] = await db.query(
+            `SELECT id as user_id, name as user_name, email as user_email, role as user_role, COALESCE(stationary_blocked, 0) as is_blocked FROM users`
+        );
 
-        // 2. Top Consumed Items (Overall)
-        const topItemsQuery = `
-            SELECT i.item_name, i.category, i.unit, SUM(r.quantity) as total_consumed
-            FROM stationary_requests r
-            JOIN stationary_items i ON r.item_id = i.id
-            WHERE r.status = 'Approved'
-            GROUP BY i.id, i.item_name, i.category, i.unit
-            ORDER BY total_consumed DESC
-            LIMIT 10
-        `;
-        const [topItems] = await db.query(topItemsQuery);
+        // Fetch stationary requests with item details
+        let requests = [];
+        try {
+            const [reqRes] = await db.query(`
+                SELECT r.id, r.user_id, r.item_id, r.quantity, r.status, r.requested_at,
+                       COALESCE(r.unit, i.unit, 'pcs') as unit,
+                       i.item_name, i.category
+                FROM stationary_requests r
+                JOIN stationary_items i ON r.item_id = i.id
+            `);
+            requests = Array.isArray(reqRes) ? reqRes : [];
+        } catch (e) {
+            console.error("Error fetching requests for admin reports:", e.message);
+        }
 
-        // 3. Category Breakdown
-        const categoryQuery = `
-            SELECT i.category, SUM(r.quantity) as total_qty
-            FROM stationary_requests r
-            JOIN stationary_items i ON r.item_id = i.id
-            WHERE r.status = 'Approved'
-            GROUP BY i.category
-        `;
-        const [categoryBreakdown] = await db.query(categoryQuery);
+        const userReportsMap = {};
+        
+        (users || []).forEach(u => {
+            userReportsMap[u.user_id] = {
+                user_id: u.user_id,
+                user_name: u.user_name || 'Unknown',
+                user_email: u.user_email || '',
+                user_role: u.user_role || 'user',
+                is_blocked: Number(u.is_blocked || 0),
+                total_requests: 0,
+                approved_requests: 0,
+                total_items_consumed: 0,
+                item_totals: {},
+                last_request_date: null
+            };
+        });
+
+        const topItemsMap = {};
+        const categoryMap = {};
+
+        requests.forEach(r => {
+            const uId = r.user_id;
+            
+            if (!userReportsMap[uId]) {
+                userReportsMap[uId] = {
+                    user_id: uId,
+                    user_name: r.user_name || `User #${uId}`,
+                    user_email: r.user_email || '',
+                    user_role: r.user_role || 'user',
+                    is_blocked: 0,
+                    total_requests: 0,
+                    approved_requests: 0,
+                    total_items_consumed: 0,
+                    item_totals: {},
+                    last_request_date: null
+                };
+            }
+
+            const uReport = userReportsMap[uId];
+            uReport.total_requests += 1;
+
+            if (r.requested_at) {
+                if (!uReport.last_request_date || new Date(r.requested_at) > new Date(uReport.last_request_date)) {
+                    uReport.last_request_date = r.requested_at;
+                }
+            }
+
+            if (r.status === 'Approved') {
+                uReport.approved_requests += 1;
+                const qty = Number(r.quantity || 0);
+                uReport.total_items_consumed += qty;
+                
+                const itemKey = r.item_name || 'Unknown Item';
+                uReport.item_totals[itemKey] = (uReport.item_totals[itemKey] || 0) + qty;
+
+                if (!topItemsMap[r.item_id]) {
+                    topItemsMap[r.item_id] = {
+                        item_name: r.item_name,
+                        category: r.category,
+                        unit: r.unit,
+                        total_consumed: 0
+                    };
+                }
+                topItemsMap[r.item_id].total_consumed += qty;
+
+                const catKey = r.category || 'General';
+                categoryMap[catKey] = (categoryMap[catKey] || 0) + qty;
+            }
+        });
+
+        const reports = Object.values(userReportsMap)
+            .filter(u => u.total_requests > 0 || u.total_items_consumed > 0)
+            .map(u => {
+                const detailsArr = Object.entries(u.item_totals).map(([name, qty]) => `${name} (${qty})`);
+                const detailed_consumption = detailsArr.length > 0 ? detailsArr.join(', ') : '-';
+                
+                let top_item = '-';
+                let maxQty = 0;
+                Object.entries(u.item_totals).forEach(([name, qty]) => {
+                    if (qty > maxQty) {
+                        maxQty = qty;
+                        top_item = `${name} (${qty})`;
+                    }
+                });
+
+                return {
+                    user_id: u.user_id,
+                    user_name: u.user_name,
+                    user_email: u.user_email,
+                    user_role: u.user_role,
+                    is_blocked: u.is_blocked,
+                    total_requests: u.total_requests,
+                    approved_requests: u.approved_requests,
+                    total_items_consumed: u.total_items_consumed,
+                    detailed_consumption,
+                    last_request_date: u.last_request_date,
+                    top_item
+                };
+            })
+            .sort((a, b) => b.total_items_consumed - a.total_items_consumed);
+
+        const topItems = Object.values(topItemsMap)
+            .sort((a, b) => b.total_consumed - a.total_consumed)
+            .slice(0, 10);
+
+        const categoryBreakdown = Object.entries(categoryMap).map(([category, total_qty]) => ({
+            category,
+            total_qty
+        }));
 
         res.json({
             reports,

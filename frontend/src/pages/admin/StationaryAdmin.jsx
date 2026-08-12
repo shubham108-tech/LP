@@ -1466,14 +1466,24 @@ const StationaryReports = () => {
     const fetchReports = async () => {
         setLoading(true);
         try {
-            const [res, reqRes] = await Promise.all([
-                api.get('/stationary/reports'),
-                api.get('/stationary/requests')
-            ]);
-            setReportsData(res.data || { reports: [], topItems: [], categoryBreakdown: [] });
+            const res = await api.get('/stationary/reports');
+            if (res.data) {
+                setReportsData({
+                    reports: Array.isArray(res.data.reports) ? res.data.reports : [],
+                    topItems: Array.isArray(res.data.topItems) ? res.data.topItems : [],
+                    categoryBreakdown: Array.isArray(res.data.categoryBreakdown) ? res.data.categoryBreakdown : []
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching stationary reports:', error);
+            toast.error('Failed to load consumption analytics');
+        }
+
+        try {
+            const reqRes = await api.get('/stationary/requests');
             setAllRequests(Array.isArray(reqRes.data) ? reqRes.data : []);
         } catch (error) {
-            toast.error('Failed to load consumption analytics');
+            console.error('Error fetching stationary requests:', error);
         } finally {
             setLoading(false);
         }
