@@ -570,7 +570,7 @@ exports.getAdminReports = async (req, res) => {
     try {
         // Fetch users
         const [users] = await db.query(
-            `SELECT id as user_id, name as user_name, email as user_email, role as user_role, COALESCE(stationary_blocked, 0) as is_blocked FROM users`
+            `SELECT id as user_id, name as user_name, email as user_email, role as user_role, COALESCE(stationary_blocked, false) as is_blocked FROM users`
         );
 
         // Fetch stationary requests with item details
