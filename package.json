@@ -10,6 +10,7 @@
     "server": "cd backend && npm run dev",
     "client": "cd frontend && npm run dev",
     "deploy": "cd frontend && npm run deploy",
+    "push-deploy": "git push origin main && npm run deploy",
     "install-deps": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "seed": "cd backend && node seed.js"
   },
