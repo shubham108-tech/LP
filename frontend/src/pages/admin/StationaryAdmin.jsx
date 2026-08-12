@@ -1467,6 +1467,104 @@ const StationaryReports = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [userDetails, setUserDetails] = useState(null);
 
+    const exportDataToCSV = (title, dataList, sectionName = 'General') => {
+        if (!dataList || !dataList.length) return toast.error(`No ${title.toLowerCase()} records to export`);
+        let totalQty = 0;
+        const formattedRows = dataList.map((row, idx) => {
+            const qty = Number(row.received_qty || row.issued_qty || row.quantity || 0);
+            totalQty += qty;
+            const reqDateStr = row.requested_at || row.date;
+            const reqDateTime = reqDateStr ? new Date(reqDateStr).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : 'N/A';
+            const issueDateStr = row.acted_at || (['Approved', 'Returned', 'ISSUED'].includes(row.status || row.transaction_type) ? row.date : null);
+            const issueDateTime = issueDateStr ? new Date(issueDateStr).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : (row.status === 'Pending' ? 'Awaiting Action' : 'N/A');
+            return {
+                "Sr. No.": `#${idx + 1}`,
+                "Voucher / Ref No.": row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A'),
+                "Stationary Item Name": row.item_name || 'N/A',
+                "Category": row.category || 'N/A',
+                "Requisition Date & Time": reqDateTime,
+                "Issue / Action Date & Time": issueDateTime,
+                "Quantity": qty,
+                "Unit": row.unit || 'pcs',
+                "Stock Balance": row.balance !== undefined ? `${row.balance} ${row.unit || 'pcs'}` : 'N/A',
+                "Teacher / Recipient": row.user_name || 'Admin',
+                "Email & Role": row.user_email ? `${row.user_email} (${row.user_role || 'User'})` : (row.user_role || 'Staff/Admin'),
+                "Status / Action": row.status || row.transaction_type || 'N/A',
+                "Reason / Notes": row.reason || row.notes || 'N/A'
+            };
+        });
+        let csvString = "\uFEFF";
+        csvString += `"=========================================================================================="\r\n`;
+        csvString += `"LIBRARYPRO - OFFICIAL MANAGEMENT REPORT"\r\n`;
+        csvString += `"Report Title:","${title.toUpperCase().replace(/"/g, '""')}"\r\n`;
+        csvString += `"Section / Department:","${sectionName.replace(/"/g, '""')}"\r\n`;
+        csvString += `"Generated Date & Time:","${new Date().toLocaleString()}"\r\n`;
+        csvString += `"Total Records:","${dataList.length}"\r\n`;
+        csvString += `"=========================================================================================="\r\n\r\n`;
+        const keys = Object.keys(formattedRows[0]);
+        csvString += keys.map(k => `"${k.replace(/"/g, '""')}"`).join(",") + "\r\n";
+        formattedRows.forEach(row => {
+            const values = keys.map(k => `"${String(row[k] ?? '').replace(/"/g, '""')}"`);
+            csvString += values.join(",") + "\r\n";
+        });
+        csvString += `\r\n"=========================================================================================="\r\n`;
+        csvString += `"SUMMARY TOTALS"\r\n`;
+        csvString += `"Total Records Exported:","${dataList.length}"\r\n`;
+        csvString += `"Total Quantity Sum:","${totalQty}"\r\n`;
+        csvString += `"Document Status:","Official Confidential Export"\r\n`;
+        csvString += `"=========================================================================================="\r\n`;
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${title.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success(`${title} exported to CSV!`);
+    };
+
+    const generatePDFReport = (reportTitle, dataList, sectionName = 'General') => {
+        if (!dataList || !dataList.length) return toast.error(`No data to generate ${reportTitle}`);
+        let totalQty = 0;
+        let totalRecords = dataList.length;
+        const itemGroups = dataList.reduce((acc, row) => {
+            const itemName = row.item_name || 'General Stationary';
+            if (!acc[itemName]) { acc[itemName] = { category: row.category || 'N/A', unit: row.unit || 'pcs', items: [], totalQty: 0 }; }
+            const qty = Number(row.received_qty || row.issued_qty || row.quantity || 0);
+            acc[itemName].items.push(row);
+            acc[itemName].totalQty += qty;
+            totalQty += qty;
+            return acc;
+        }, {});
+        const uniqueStationaryCount = Object.keys(itemGroups).length;
+        const uniqueUsersCount = new Set(dataList.map(r => r.user_name || r.user_email).filter(Boolean)).size;
+        const itemGroupsHtml = Object.entries(itemGroups).map(([itemName, group]) => {
+            const tableRows = group.items.map((row, idx) => {
+                const qty = row.received_qty || row.issued_qty || row.quantity || 0;
+                const status = row.status || row.transaction_type || 'N/A';
+                let badgeClass = 'badge-amber';
+                if (['RECEIVED', 'RESTOCK', 'Approved'].includes(status)) badgeClass = 'badge-green';
+                if (['ISSUED', 'Rejected'].includes(status)) badgeClass = 'badge-red';
+                if (['Returned'].includes(status)) badgeClass = 'badge-blue';
+                const reqDateStr = row.requested_at || row.date;
+                const reqDateHtml = reqDateStr ? `<div style="font-weight:600;color:#1e293b;">📅 ${new Date(reqDateStr).toLocaleDateString()}</div><div style="font-size:10px;color:#64748b;">⏰ ${new Date(reqDateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>` : 'N/A';
+                const issueDateStr = row.acted_at || (['Approved', 'Returned', 'ISSUED'].includes(status) ? row.date : null);
+                const issueDateHtml = issueDateStr ? `<div style="font-weight:600;color:#15803d;">📅 ${new Date(issueDateStr).toLocaleDateString()}</div><div style="font-size:10px;color:#15803d;">⏰ ${new Date(issueDateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>` : (status === 'Pending' ? '<span style="font-size:11px;color:#b45309;font-weight:600;">⏳ Awaiting Action</span>' : '<span style="color:#94a3b8;">-</span>');
+                const refNo = row.id ? `#REQ-${row.id}` : (row.reference_no || row.bill_number || 'N/A');
+                return `<tr><td style="text-align:center;font-weight:bold;color:#475569;">#${idx + 1}</td><td><span style="font-family:monospace;font-weight:bold;background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:11px;">${refNo}</span></td><td>${reqDateHtml}</td><td>${issueDateHtml}</td><td><strong>${row.user_name || 'Admin'}</strong>${row.user_email ? `<br><small style="color:#64748b;">${row.user_email} (${row.user_role || 'User'})</small>` : ''}</td><td style="text-align:right;font-weight:800;color:#4338ca;">${qty} ${group.unit}</td><td style="text-align:right;font-weight:700;color:#0f766e;">${row.balance !== undefined ? row.balance + ' ' + group.unit : '-'}</td><td style="text-align:center;"><span class="badge ${badgeClass}">${status}</span></td><td style="font-size:11px;color:#334155;">${row.reason || row.notes || '-'}</td></tr>`;
+            }).join('');
+            return `<div class="item-group-box"><div class="item-group-header"><div><span class="item-icon">📦</span><strong class="item-title">${itemName}</strong><span class="item-category-tag">${group.category}</span></div><div class="item-summary-pills"><span class="pill pill-qty">Total Qty: <strong>${group.totalQty} ${group.unit}</strong></span><span class="pill pill-count">Requests: <strong>${group.items.length}</strong></span></div></div><table><thead><tr><th style="width:35px;text-align:center;">Sr.</th><th style="width:90px;">Req / Ref No.</th><th style="width:110px;">Requisition Date & Time</th><th style="width:110px;">Issue Date & Time</th><th>Teacher / Recipient</th><th style="width:80px;text-align:right;">Quantity</th><th style="width:75px;text-align:right;">Stock Bal</th><th style="width:75px;text-align:center;">Status</th><th>Reason / Notes</th></tr></thead><tbody>${tableRows}<tr class="item-subtotal-row"><td colspan="5" style="text-align:right;font-weight:bold;color:#1e1b4b;">Subtotal for ${itemName}:</td><td style="text-align:right;font-weight:900;color:#4338ca;">${group.totalQty} ${group.unit}</td><td colspan="3"></td></tr></tbody></table></div>`;
+        }).join('');
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return toast.error('Popup blocked! Please allow popups for this site.');
+        printWindow.document.write(`<!DOCTYPE html><html><head><title>${reportTitle} - LibraryPro Report</title><style>@page{size:A4 portrait;margin:10mm;}@media print{.no-print{display:none!important;}body{padding:0;background:#fff;}.item-group-box{page-break-inside:avoid;}}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:15px;color:#0f172a;background:#fff;}.no-print-bar{display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;padding:12px 20px;border-radius:10px;margin-bottom:20px;border:1px solid #cbd5e1;}.btn-print{background:#4f46e5;color:white;border:none;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;}.btn-close{background:#cbd5e1;color:#334155;border:none;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;margin-left:8px;font-size:13px;}.header-banner{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #4f46e5;padding-bottom:12px;margin-bottom:20px;}.org-logo{font-size:24px;font-weight:900;color:#4338ca;}.report-heading{font-size:18px;font-weight:800;color:#0f172a;margin-top:4px;}.report-meta{text-align:right;font-size:12px;color:#475569;line-height:1.5;}.summary-grid{display:flex;gap:12px;margin-bottom:22px;}.stat-card{flex:1;border:2px solid #cbd5e1;border-radius:10px;padding:10px 14px;background:#f8fafc;box-shadow:0 4px 8px rgba(0,0,0,0.04);}.stat-title{font-size:10px;text-transform:uppercase;font-weight:700;color:#64748b;letter-spacing:0.5px;}.stat-val{font-size:18px;font-weight:900;color:#1e1b4b;margin-top:2px;}.item-group-box{border:2px solid #cbd5e1;border-radius:12px;overflow:hidden;margin-bottom:22px;box-shadow:0 4px 10px rgba(0,0,0,0.04);background:#ffffff;}.item-group-header{display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;padding:10px 16px;border-bottom:2px solid #cbd5e1;}.item-icon{font-size:16px;margin-right:6px;}.item-title{font-size:15px;color:#0f172a;font-weight:800;}.item-category-tag{font-size:10px;background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:700;text-transform:uppercase;}.item-summary-pills{display:flex;gap:8px;}.pill{font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;}.pill-qty{background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;}.pill-count{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#0f172a;color:#ffffff;text-align:left;padding:9px 10px;font-weight:700;text-transform:uppercase;font-size:11px;border:1px solid #1e293b;}td{padding:8px 10px;border:1px solid #cbd5e1;vertical-align:top;}tr:nth-child(even){background-color:#f8fafc;}.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-weight:700;font-size:10px;text-transform:uppercase;}.badge-green{background:#dcfce7;color:#15803d;border:1px solid #86efac;}.badge-red{background:#ffe4e6;color:#be123c;border:1px solid #fca5a5;}.badge-amber{background:#fef3c7;color:#b45309;border:1px solid #fde68a;}.badge-blue{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;}.item-subtotal-row td{background:#f1f5f9;font-size:12px;border-top:2px solid #cbd5e1;}.sign-container{display:flex;justify-content:space-between;align-items:flex-end;margin-top:35px;padding-top:15px;page-break-inside:avoid;}.sign-box{width:200px;text-align:center;border-top:2px dashed #64748b;padding-top:8px;font-size:12px;font-weight:700;color:#334155;}.stamp-box{border:2px dashed #cbd5e1;width:130px;height:65px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;margin:0 auto;text-align:center;}.footer-bar{text-align:center;font-size:11px;color:#94a3b8;margin-top:25px;border-top:1px solid #e2e8f0;padding-top:10px;}</style></head><body><div class="no-print-bar no-print"><div><strong style="font-size:14px;color:#0f172a;">📄 Executive PDF Report Preview</strong><span style="font-size:12px;color:#64748b;margin-left:10px;">Click Print or Save as PDF below</span></div><div><button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button><button class="btn-close" onclick="window.close()">✖ Close Window</button></div></div><div class="header-banner"><div><div class="org-logo">LibraryPro System</div><div class="report-heading">${reportTitle}</div></div><div class="report-meta"><strong>Department:</strong> Stationary &amp; Inventory Control<br><strong>Section:</strong> ${sectionName}<br><strong>Generated:</strong> ${new Date().toLocaleString()}</div></div><div class="summary-grid"><div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-val">${totalRecords} Entries</div></div><div class="stat-card"><div class="stat-title">Total Quantity Handled</div><div class="stat-val">${totalQty} Units</div></div><div class="stat-card"><div class="stat-title">Stationary Item Types</div><div class="stat-val">${uniqueStationaryCount} Distinct Items</div></div><div class="stat-card"><div class="stat-title">Teachers / Recipients</div><div class="stat-val">${uniqueUsersCount} Users</div></div></div>${itemGroupsHtml}<div class="sign-container"><div class="sign-box">Store In-Charge / Admin</div><div><div class="stamp-box">Official Department<br>Seal / Stamp</div></div><div class="sign-box">HOD / Principal Verification</div></div><div class="footer-bar">Confidential Official Document • Generated by LibraryPro Inventory Management System</div></body></html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { try { printWindow.print(); } catch (e) { console.error('PDF report print error:', e); } }, 300);
+    };
+
     useEffect(() => {
         fetchReports();
     }, []);
