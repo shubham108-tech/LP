@@ -54,6 +54,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: '/admin/teachers', icon: RiUserLine, label: 'Teachers' },
         { path: '/admin/students', icon: RiUserSmileLine, label: 'Students' },
         { path: '/admin/stationary', icon: RiStore2Line, label: 'Stationary & Supplies' },
+        { path: '/admin/notices', icon: RiMailSendLine, label: 'Broadcast Notices' },
         { path: '/admin/performance', icon: RiLineChartLine, label: 'Teacher Performance' },
         { path: '/admin/feedback', icon: RiChat1Line, label: 'Feedback' },
     ];

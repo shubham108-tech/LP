@@ -168,12 +168,20 @@ exports.markAsRead = async (req, res) => {
 // Send Group Notification (Teacher/Admin)
 exports.sendGroupNotification = async (req, res) => {
     try {
-        const { message, branch, year, division } = req.body;
+        const { message, targetRole, branch, year, division } = req.body;
 
         if (!message) return res.status(400).json({ message: 'Message is required' });
 
-        let query = "SELECT id FROM users WHERE role = 'student'";
+        let query = "SELECT id FROM users WHERE 1=1";
         let params = [];
+
+        if (targetRole && targetRole !== 'all') {
+            query += ' AND role = ?';
+            params.push(targetRole);
+        } else if (!targetRole) {
+            // Default backward compatibility
+            query += " AND role = 'student'";
+        }
 
         // If sender is a teacher/HOD, enforce their branch (unless they are admin)
         if (req.user.role === 'teacher' || req.user.role === 'hod') {
@@ -202,25 +210,25 @@ exports.sendGroupNotification = async (req, res) => {
             params.push(division);
         }
 
-        const [students] = await db.query(query, params);
+        const [targets] = await db.query(query, params);
 
-        if (students.length === 0) {
-            return res.status(404).json({ message: 'No students found for the selected criteria' });
+        if (targets.length === 0) {
+            return res.status(404).json({ message: 'No users found for the selected criteria' });
         }
 
         // Bulk insert notifications
-        const values = students.map(s => [s.id, message, 'notice', false]);
+        const values = targets.map(t => [t.id, message, 'notice', false]);
         await db.query('INSERT INTO notifications (user_id, message, type, is_read) VALUES ?', [values]);
 
-        // SSE push to each student
-        for (const s of students) {
-            broadcastToUser(s.id, {
+        // SSE push to each target
+        for (const t of targets) {
+            broadcastToUser(t.id, {
                 event: 'notification',
-                notification: { user_id: s.id, message, type: 'notice', is_read: false, created_at: new Date().toISOString() }
+                notification: { user_id: t.id, message, type: 'notice', is_read: false, created_at: new Date().toISOString() }
             });
         }
 
-        res.status(201).json({ message: `Notice sent to ${students.length} students` });
+        res.status(201).json({ message: `Notice sent to ${targets.length} users` });
 
     } catch (error) {
         res.status(500).json({ message: 'Error sending notice', error: error.message });

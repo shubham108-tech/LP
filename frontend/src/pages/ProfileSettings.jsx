@@ -161,8 +161,8 @@ const ProfileSettings = () => {
                     {(user?.role === 'student' || user?.role === 'teacher') && (
                         <>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Branch</label>
-                                <select name="branch" value={formData.branch} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                <label className="text-sm font-bold text-slate-700">Branch <span className="text-xs font-normal text-rose-500">(Contact Admin to change)</span></label>
+                                <select disabled name="branch" value={formData.branch} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition bg-slate-100 cursor-not-allowed opacity-70">
                                     <option value="">Select Branch</option>
                                     <option value="Computer Science">Computer Science</option>
                                     <option value="Mechanical Engineering">Mechanical Engineering</option>
@@ -174,7 +174,7 @@ const ProfileSettings = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-slate-700">Year</label>
-                                    <select name="year" value={formData.year} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                    <select disabled name="year" value={formData.year} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition bg-slate-100 cursor-not-allowed opacity-70">
                                         <option value="">Year</option>
                                         <option value="First Year">First</option>
                                         <option value="Second Year">Second</option>
@@ -184,7 +184,7 @@ const ProfileSettings = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-slate-700">Division</label>
-                                    <select name="division" value={formData.division} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                    <select disabled name="division" value={formData.division} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition bg-slate-100 cursor-not-allowed opacity-70">
                                         <option value="">Div</option>
                                         <option value="A">A</option>
                                         <option value="B">B</option>
