@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { RiSendPlaneFill, RiNotification4Line, RiGroupLine, RiUserLocationLine, RiInformationLine } from 'react-icons/ri';
@@ -9,7 +9,23 @@ const AdminNotices = () => {
     const [branch, setBranch] = useState('');
     const [year, setYear] = useState('');
     const [division, setDivision] = useState('');
+    const [teachers, setTeachers] = useState([]);
+    const [selectedTeacherId, setSelectedTeacherId] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchTeachers = async () => {
+            try {
+                const res = await api.get('/auth/users?role=teacher');
+                if (Array.isArray(res.data)) {
+                    setTeachers(res.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch teachers', err);
+            }
+        };
+        fetchTeachers();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,8 +39,15 @@ const AdminNotices = () => {
         try {
             const payload = {
                 message: message.trim(),
-                targetRole
+                targetRole: targetRole === 'specific_teacher' ? 'teacher' : targetRole
             };
+
+            if (targetRole === 'specific_teacher') {
+                if (!selectedTeacherId) {
+                    return toast.error('Please select a teacher', { id: loadingToast });
+                }
+                payload.userId = selectedTeacherId;
+            }
 
             // Include filters if applicable
             if (targetRole === 'student' || targetRole === 'all') {
@@ -74,7 +97,7 @@ const AdminNotices = () => {
                                 <RiGroupLine className="text-lg" /> Target Audience
                             </h3>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                 <label className={`cursor-pointer p-4 border-2 rounded-2xl flex flex-col gap-2 transition-all ${targetRole === 'all' ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' : 'border-slate-100 hover:border-indigo-200 bg-slate-50'}`}>
                                     <input type="radio" name="targetRole" value="all" className="hidden" checked={targetRole === 'all'} onChange={(e) => setTargetRole(e.target.value)} />
                                     <span className="font-bold text-slate-800 text-lg">Everyone</span>
@@ -97,6 +120,12 @@ const AdminNotices = () => {
                                     <input type="radio" name="targetRole" value="hod" className="hidden" checked={targetRole === 'hod'} onChange={(e) => setTargetRole(e.target.value)} />
                                     <span className="font-bold text-slate-800 text-lg">HODs</span>
                                     <span className="text-xs text-slate-500 font-medium">Department heads</span>
+                                </label>
+                                
+                                <label className={`cursor-pointer p-4 border-2 rounded-2xl flex flex-col gap-2 transition-all ${targetRole === 'specific_teacher' ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' : 'border-slate-100 hover:border-indigo-200 bg-slate-50'}`}>
+                                    <input type="radio" name="targetRole" value="specific_teacher" className="hidden" checked={targetRole === 'specific_teacher'} onChange={(e) => setTargetRole(e.target.value)} />
+                                    <span className="font-bold text-slate-800 text-lg">Specific</span>
+                                    <span className="text-xs text-slate-500 font-medium">Individual teacher</span>
                                 </label>
                             </div>
                         </div>
@@ -144,6 +173,22 @@ const AdminNotices = () => {
                                             </div>
                                         </>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {targetRole === 'specific_teacher' && (
+                            <div className="bg-slate-50/70 p-5 border border-slate-100 rounded-2xl space-y-4">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                                    <RiUserLocationLine className="text-lg" /> Select Teacher
+                                </h3>
+                                <div>
+                                    <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow" required>
+                                        <option value="">Choose a teacher...</option>
+                                        {teachers.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name} ({t.branch || 'No Branch'})</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         )}

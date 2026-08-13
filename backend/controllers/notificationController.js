@@ -168,46 +168,51 @@ exports.markAsRead = async (req, res) => {
 // Send Group Notification (Teacher/Admin)
 exports.sendGroupNotification = async (req, res) => {
     try {
-        const { message, targetRole, branch, year, division } = req.body;
+        const { message, targetRole, userId, branch, year, division } = req.body;
 
         if (!message) return res.status(400).json({ message: 'Message is required' });
 
         let query = "SELECT id FROM users WHERE 1=1";
         let params = [];
 
-        if (targetRole && targetRole !== 'all') {
-            query += ' AND role = ?';
-            params.push(targetRole);
-        } else if (!targetRole) {
-            // Default backward compatibility
-            query += " AND role = 'student'";
-        }
-
-        // If sender is a teacher/HOD, enforce their branch (unless they are admin)
-        if (req.user.role === 'teacher' || req.user.role === 'hod') {
-            if (req.user.branch) {
-                query += ' AND branch = ?';
-                params.push(req.user.branch);
-            } else if (branch) {
-                query += ' AND branch = ?';
-                params.push(branch);
-            }
+        if (userId) {
+            query += ' AND id = ?';
+            params.push(userId);
         } else {
-            // Admin can send to any branch
-            if (branch) {
-                query += ' AND branch = ?';
-                params.push(branch);
+            if (targetRole && targetRole !== 'all') {
+                query += ' AND role = ?';
+                params.push(targetRole);
+            } else if (!targetRole) {
+                // Default backward compatibility
+                query += " AND role = 'student'";
             }
-        }
 
-        if (year) {
-            query += ' AND year = ?';
-            params.push(year);
-        }
+            // If sender is a teacher/HOD, enforce their branch (unless they are admin)
+            if (req.user.role === 'teacher' || req.user.role === 'hod') {
+                if (req.user.branch) {
+                    query += ' AND branch = ?';
+                    params.push(req.user.branch);
+                } else if (branch) {
+                    query += ' AND branch = ?';
+                    params.push(branch);
+                }
+            } else {
+                // Admin can send to any branch
+                if (branch) {
+                    query += ' AND branch = ?';
+                    params.push(branch);
+                }
+            }
 
-        if (division) {
-            query += ' AND division = ?';
-            params.push(division);
+            if (year) {
+                query += ' AND year = ?';
+                params.push(year);
+            }
+
+            if (division) {
+                query += ' AND division = ?';
+                params.push(division);
+            }
         }
 
         const [targets] = await db.query(query, params);
