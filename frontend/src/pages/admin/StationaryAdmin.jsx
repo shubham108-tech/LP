@@ -50,6 +50,8 @@ const StationaryAdmin = () => {
     // Search & Filter states
     const [inventorySearch, setInventorySearch] = useState('');
     const [ledgerSearch, setLedgerSearch] = useState('');
+    const [requestSearch, setRequestSearch] = useState('');
+    const [requestStatusFilter, setRequestStatusFilter] = useState('All');
 
     // Form states
     const [editingItem, setEditingItem] = useState(null);
@@ -152,7 +154,7 @@ const StationaryAdmin = () => {
   const handleBulkAction = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await api.post('/stationary/requests/bulk-update', {
+      await api.put('/stationary/requests/bulk-update', {
         ids: selectedIds,
         status: bulkStatus,
       });
@@ -696,6 +698,20 @@ const StationaryAdmin = () => {
         );
     }, [ledger, ledgerSearch]);
 
+    // filteredRequests — search by item name, user name, status
+    const filteredRequests = useMemo(() => {
+        return requests.filter(req => {
+            const matchSearch = !requestSearch ||
+                req.item_name?.toLowerCase().includes(requestSearch.toLowerCase()) ||
+                req.user_name?.toLowerCase().includes(requestSearch.toLowerCase()) ||
+                req.user_email?.toLowerCase().includes(requestSearch.toLowerCase()) ||
+                req.reason?.toLowerCase().includes(requestSearch.toLowerCase()) ||
+                String(req.id).includes(requestSearch);
+            const matchStatus = requestStatusFilter === 'All' || req.status === requestStatusFilter;
+            return matchSearch && matchStatus;
+        });
+    }, [requests, requestSearch, requestStatusFilter]);
+
     return (
         <div className="p-6">
             <h1 className="text-3xl font-bold text-slate-800 mb-6 flex items-center">
@@ -961,6 +977,40 @@ const StationaryAdmin = () => {
                             generatePDFReport={generatePDFReport}
                         />
                     </div>
+                    {/* Search & Filter Bar */}
+                    <div className="flex flex-wrap gap-3 mb-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                            <RiSearchLine className="text-slate-400 flex-shrink-0" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search by item, user, reason, ID..."
+                                value={requestSearch}
+                                onChange={e => setRequestSearch(e.target.value)}
+                                className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400"
+                            />
+                        </div>
+                        <select
+                            value={requestStatusFilter}
+                            onChange={e => setRequestStatusFilter(e.target.value)}
+                            className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        >
+                            <option value="All">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Returned">Returned</option>
+                        </select>
+                        {(requestSearch || requestStatusFilter !== 'All') && (
+                            <button
+                                onClick={() => { setRequestSearch(''); setRequestStatusFilter('All'); }}
+                                className="text-xs text-slate-500 hover:text-rose-600 px-2 py-1 rounded-lg border border-slate-200 bg-white transition"
+                            >
+                                Clear
+                            </button>
+                        )}
+                        <span className="text-xs text-slate-400 self-center">{filteredRequests.length} of {requests.length} records</span>
+                    </div>
+
                     {/* Bulk Actions */}
                     <div className="flex items-center gap-3 mb-4">
                         <label className="inline-flex items-center space-x-2">
