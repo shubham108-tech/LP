@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -9,10 +9,14 @@ import {
     RiMessage3Line, RiSendPlaneFill, RiStarFill, RiStarLine
 } from 'react-icons/ri';
 import { useAuth } from '../../context/AuthContext';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { SERVER_URL } from '../../config';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import EnhancedReader from '../../components/EnhancedReader';
+
+// Lazy-load heavy components — keeps initial chunk small
+const EnhancedReader = lazy(() => import('../../components/EnhancedReader'));
+const LazyCharts = lazy(() => import('recharts').then(m => ({
+    default: ({ children }) => children
+})));
 
 const TeacherDashboard = () => {
     const { user } = useAuth();

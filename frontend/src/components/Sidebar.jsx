@@ -18,7 +18,18 @@ const Sidebar = ({ isOpen, onClose }) => {
     useEffect(() => {
         fetchModules();
         window.addEventListener('modulesUpdated', fetchModules);
-        return () => window.removeEventListener('modulesUpdated', fetchModules);
+        // Listen for profile picture changes from ProfileSettings
+        const handleProfileUpdate = (e) => {
+            if (e.detail) {
+                // AuthContext updateUser already updates localStorage; force re-render via state
+                setModules(prev => ({ ...prev }));
+            }
+        };
+        window.addEventListener('profileUpdated', handleProfileUpdate);
+        return () => {
+            window.removeEventListener('modulesUpdated', fetchModules);
+            window.removeEventListener('profileUpdated', handleProfileUpdate);
+        };
     }, []);
 
     const fetchModules = async () => {

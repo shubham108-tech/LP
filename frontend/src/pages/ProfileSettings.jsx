@@ -74,6 +74,8 @@ const ProfileSettings = () => {
             updateUser(res.data.user);
             toast.success('Profile updated successfully', { id: toastId });
             setFormData(prev => ({ ...prev, password: '' })); // Clear password
+            // Notify sidebar to re-render profile picture instantly
+            window.dispatchEvent(new CustomEvent('profileUpdated', { detail: res.data.user }));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Update failed', { id: toastId });
         }

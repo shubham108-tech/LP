@@ -271,7 +271,7 @@ exports.getRequests = async (req, res) => {
         `;
         let params = [];
 
-        if (req.user.role !== 'admin' && req.user.role !== 'hod') {
+        if ((req.user.role !== 'admin' && req.user.role !== 'hod') || req.query.view === 'personal') {
             query += ' WHERE r.user_id = ?';
             params.push(req.user.id);
         }

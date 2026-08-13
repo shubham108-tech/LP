@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../../services/api';
 import { Link } from 'react-router-dom';
 import { RiBookLine, RiBookOpenLine, RiUserLine, RiHistoryLine, RiTimeLine, RiTrophyLine, RiBarChartLine, RiUserSmileLine, RiFileDownloadLine, RiCloseCircleLine, RiErrorWarningLine, RiMoneyDollarCircleLine, RiRefreshLine, RiToggleLine, RiExchangeLine, RiStore2Line, RiWhatsappLine, RiQrCodeLine } from 'react-icons/ri';
@@ -52,10 +52,15 @@ const AdminDashboard = () => {
     const [isResetting, setIsResetting] = useState(false);
     const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
     const [waStatus, setWaStatus] = useState({ isReady: false });
+    const [lastRefreshed, setLastRefreshed] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         fetchDashboardData();
         checkWhatsAppStatus();
+        // Auto-refresh every 30 seconds
+        const interval = setInterval(() => fetchDashboardData(true), 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const checkWhatsAppStatus = async () => {
@@ -67,7 +72,8 @@ const AdminDashboard = () => {
         }
     };
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (silent = false) => {
+        if (!silent) setIsRefreshing(true);
         try {
             const res = await api.get('/admin/data');
             setStats(res.data.stats);
@@ -79,8 +85,11 @@ const AdminDashboard = () => {
             setTopBorrowers(res.data.topBorrowers || []);
             setLowStockStationary(res.data.lowStockStationary || []);
             setTodayStatIssues(res.data.todayStatIssues || 0);
+            setLastRefreshed(new Date());
         } catch (error) {
-            toast.error('Failed to fetch dashboard data');
+            if (!silent) toast.error('Failed to fetch dashboard data');
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -135,7 +144,18 @@ const AdminDashboard = () => {
     return (
         <div>
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-                <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live
+                        </span>
+                        {lastRefreshed && (
+                            <span className="text-xs text-slate-400">· Updated {lastRefreshed.toLocaleTimeString()}</span>
+                        )}
+                    </div>
+                </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => {

@@ -15,6 +15,8 @@ const StationaryTeacher = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [historySearch, setHistorySearch] = useState('');
     const [historyStatus, setHistoryStatus] = useState('All');
+    const [historyDateFrom, setHistoryDateFrom] = useState('');
+    const [historyDateTo, setHistoryDateTo] = useState('');
 
     // Form states
     const [selectedItem, setSelectedItem] = useState('');
@@ -55,9 +57,12 @@ const StationaryTeacher = () => {
                 req.category?.toLowerCase().includes(historySearch.toLowerCase()) ||
                 req.reason?.toLowerCase().includes(historySearch.toLowerCase());
             const matchStatus = historyStatus === 'All' || req.status === historyStatus;
-            return matchSearch && matchStatus;
+            const reqDate = req.requested_at ? new Date(req.requested_at) : null;
+            const matchFrom = !historyDateFrom || (reqDate && reqDate >= new Date(historyDateFrom));
+            const matchTo   = !historyDateTo   || (reqDate && reqDate <= new Date(historyDateTo + 'T23:59:59'));
+            return matchSearch && matchStatus && matchFrom && matchTo;
         });
-    }, [requests, historySearch, historyStatus]);
+    }, [requests, historySearch, historyStatus, historyDateFrom, historyDateTo]);
 
     useEffect(() => {
         fetchData();
@@ -68,7 +73,7 @@ const StationaryTeacher = () => {
         try {
             const [itemsRes, reqsRes] = await Promise.all([
                 api.get('/stationary/items'),
-                api.get('/stationary/requests')
+                api.get('/stationary/requests?view=personal')
             ]);
             const itemsList = Array.isArray(itemsRes.data) ? itemsRes.data : [];
             setItems(itemsList);
@@ -327,6 +332,7 @@ const StationaryTeacher = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                             <h2 className="text-lg font-bold text-slate-800">My Requisition History</h2>
                             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                {/* Search */}
                                 <div className="relative flex-1 sm:flex-none">
                                     <RiSearchLine className="absolute left-3 top-2.5 text-slate-400 text-sm" />
                                     <input
@@ -337,6 +343,7 @@ const StationaryTeacher = () => {
                                         onChange={e => setHistorySearch(e.target.value)}
                                     />
                                 </div>
+                                {/* Status filter */}
                                 <select
                                     className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
                                     value={historyStatus}
@@ -348,6 +355,31 @@ const StationaryTeacher = () => {
                                     <option value="Rejected">Rejected</option>
                                     <option value="Returned">Returned</option>
                                 </select>
+                                {/* Date From */}
+                                <input
+                                    type="date"
+                                    title="From date"
+                                    className="border border-slate-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                                    value={historyDateFrom}
+                                    onChange={e => setHistoryDateFrom(e.target.value)}
+                                />
+                                {/* Date To */}
+                                <input
+                                    type="date"
+                                    title="To date"
+                                    className="border border-slate-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                                    value={historyDateTo}
+                                    onChange={e => setHistoryDateTo(e.target.value)}
+                                />
+                                {(historySearch || historyStatus !== 'All' || historyDateFrom || historyDateTo) && (
+                                    <button
+                                        onClick={() => { setHistorySearch(''); setHistoryStatus('All'); setHistoryDateFrom(''); setHistoryDateTo(''); }}
+                                        className="text-xs px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition bg-white font-semibold"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                                <span className="text-xs text-slate-400 self-center">{filteredRequests.length}/{requests.length}</span>
                             </div>
                         </div>
                         <div className="overflow-x-auto">
