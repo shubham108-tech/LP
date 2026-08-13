@@ -46,6 +46,8 @@ const AdminDashboard = () => {
     const [categoryData, setCategoryData] = useState([]);
     const [monthlyData, setMonthlyData] = useState([]);
     const [topBorrowers, setTopBorrowers] = useState([]);
+    const [lowStockStationary, setLowStockStationary] = useState([]);
+    const [todayStatIssues, setTodayStatIssues] = useState(0);
     const [showResetModal, setShowResetModal] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
@@ -75,6 +77,8 @@ const AdminDashboard = () => {
             setCategoryData(res.data.categoryStats || []);
             setMonthlyData(res.data.monthlyStats || []);
             setTopBorrowers(res.data.topBorrowers || []);
+            setLowStockStationary(res.data.lowStockStationary || []);
+            setTodayStatIssues(res.data.todayStatIssues || 0);
         } catch (error) {
             toast.error('Failed to fetch dashboard data');
         }
@@ -191,6 +195,53 @@ const AdminDashboard = () => {
                 <StatCard title="Teachers" value={stats.totalTeachers} icon={RiUserLine} bgClass="bg-purple-100" colorClass="text-purple-600" />
                 <StatCard title="Students" value={stats.totalStudents} icon={RiUserSmileLine} bgClass="bg-pink-100" colorClass="text-pink-600" />
             </div>
+
+            {/* Stationary Quick Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="relative p-5 rounded-2xl bg-white shadow-sm border border-amber-200 flex items-center gap-4 overflow-hidden">
+                    <div className="p-3 rounded-xl bg-amber-100 text-amber-600 flex-shrink-0"><RiStore2Line className="text-2xl" /></div>
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pending Stationary</p>
+                        <p className="text-3xl font-extrabold text-slate-800">{stats.pendingStationaryRequests || 0}</p>
+                    </div>
+                    {(stats.pendingStationaryRequests || 0) > 0 && <span className="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">ACTION NEEDED</span>}
+                </div>
+                <div className="relative p-5 rounded-2xl bg-white shadow-sm border border-rose-200 flex items-center gap-4 overflow-hidden">
+                    <div className="p-3 rounded-xl bg-rose-100 text-rose-600 flex-shrink-0"><RiErrorWarningLine className="text-2xl" /></div>
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Low Stock Items</p>
+                        <p className="text-3xl font-extrabold text-slate-800">{lowStockStationary.length}</p>
+                    </div>
+                    {lowStockStationary.length > 0 && <span className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">RESTOCK!</span>}
+                </div>
+                <div className="p-5 rounded-2xl bg-white shadow-sm border border-emerald-200 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-emerald-100 text-emerald-600 flex-shrink-0"><RiBarChartLine className="text-2xl" /></div>
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Today's Issues</p>
+                        <p className="text-3xl font-extrabold text-slate-800">{todayStatIssues}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Low Stock Stationary Alert */}
+            {lowStockStationary.length > 0 && (
+                <div className="mb-8 bg-rose-50 border border-rose-200 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                        <RiErrorWarningLine className="text-rose-500 text-xl" />
+                        <h3 className="font-bold text-rose-700 text-sm">Low Stock Stationary Items — Restock Needed</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {lowStockStationary.map(item => (
+                            <div key={item.id} className="flex items-center gap-2 bg-white border border-rose-200 rounded-xl px-3 py-2 text-xs shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0"></span>
+                                <span className="font-bold text-slate-800">{item.item_name}</span>
+                                <span className="text-rose-600 font-black">{item.available_stock}</span>
+                                <span className="text-slate-400">/ min {item.min_stock_limit} {item.unit}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">

@@ -14,6 +14,7 @@ router.delete('/items/:id', authenticateToken, isStrictAdmin, stationaryControll
 // Request management (Teachers, Staff, HOD, Admin)
 router.post('/requests', authenticateToken, stationaryController.requestItem);
 router.get('/requests', authenticateToken, stationaryController.getRequests);
+router.put('/requests/bulk-update', authenticateToken, isAdmin, stationaryController.bulkUpdateRequests);
 router.put('/requests/:id', authenticateToken, isAdmin, stationaryController.updateRequestStatus);
 router.delete('/requests/:id', authenticateToken, isStrictAdmin, stationaryController.deleteRequest);
 

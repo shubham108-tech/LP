@@ -11,6 +11,22 @@ exports.getDashboardData = async (req, res) => {
         const [pendingBookReqs] = await db.query("SELECT COUNT(*) as count FROM book_requests WHERE LOWER(status) = 'pending'");
         const [pendingStatReqs] = await db.query("SELECT COUNT(*) as count FROM stationary_requests WHERE LOWER(status) = 'pending'");
 
+        // Low stock stationary items (available_stock < min_stock_limit)
+        const [lowStockStationary] = await db.query(`
+            SELECT id, item_name, available_stock, min_stock_limit, unit
+            FROM stationary_items
+            WHERE available_stock < min_stock_limit
+            ORDER BY available_stock ASC
+            LIMIT 10
+        `);
+
+        // Today's stationary issues count
+        const [todayStatIssues] = await db.query(`
+            SELECT COUNT(*) as count FROM stationary_requests
+            WHERE LOWER(status) = 'approved'
+            AND DATE(acted_at) = CURRENT_DATE
+        `);
+
         // Count Teachers and Students separately
         const [userStats] = await db.query(`
             SELECT role, COUNT(*) as count 
@@ -138,7 +154,9 @@ exports.getDashboardData = async (req, res) => {
             overdueBooks,
             categoryStats,
             monthlyStats,
-            topBorrowers
+            topBorrowers,
+            lowStockStationary,
+            todayStatIssues: todayStatIssues[0]?.count || 0
         });
     } catch (error) {
         console.error('Dashboard error:', error);

@@ -349,6 +349,27 @@ exports.updateRequestStatus = async (req, res) => {
             [targetStatus, targetQuantity, targetReason, targetUnit, id]
         );
 
+        // Feature: Low Stock Alert — notify admins if stock fell below min_stock_limit after approval
+        if (targetStatus === 'Approved') {
+            try {
+                const [updatedItem] = await db.query(
+                    'SELECT item_name, available_stock, min_stock_limit, unit FROM stationary_items WHERE id = ?',
+                    [itemId]
+                );
+                if (updatedItem.length > 0) {
+                    const it = updatedItem[0];
+                    if (Number(it.available_stock) < Number(it.min_stock_limit)) {
+                        await notifyAdmins(
+                            `⚠️ Low Stock Alert: "${it.item_name}" is running low! Only ${it.available_stock} ${it.unit} remaining (Minimum: ${it.min_stock_limit} ${it.unit}). Please restock soon.`,
+                            'alert'
+                        );
+                    }
+                }
+            } catch (alertErr) {
+                console.error('Low stock alert error:', alertErr);
+            }
+        }
+
         res.json({ message: 'Request updated successfully and stock inventory rebalanced' });
     } catch (error) {
         console.error('UPDATE REQUEST ERROR:', error);
@@ -754,4 +775,63 @@ exports.toggleUserBlock = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error updating status', error: error.message });
     }
+};
+// Bulk Update Requests (Admin/HOD) — Approve or Reject multiple at once
+exports.bulkUpdateRequests = async (req, res) => {
+    const { ids, status } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'No request IDs provided' });
+    }
+    if (!['Approved', 'Rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Status must be Approved or Rejected' });
+    }
+
+    const results = { success: 0, failed: 0, errors: [] };
+
+    for (const id of ids) {
+        try {
+            const [requestData] = await db.query('SELECT * FROM stationary_requests WHERE id = ?', [id]);
+            if (requestData.length === 0) { results.failed++; continue; }
+
+            const request = requestData[0];
+            if (request.status !== 'Pending') { results.failed++; continue; } // skip non-pending
+
+            const prevQty = Number(request.quantity);
+            const itemId = request.item_id;
+
+            const [itemData] = await db.query('SELECT available_stock, min_stock_limit, item_name, unit FROM stationary_items WHERE id = ?', [itemId]);
+            if (itemData.length === 0) { results.failed++; continue; }
+
+            let currentAvailable = Number(itemData[0].available_stock);
+
+            if (status === 'Approved') {
+                if (currentAvailable < prevQty) { results.failed++; results.errors.push(`#${id}: Not enough stock`); continue; }
+                currentAvailable -= prevQty;
+                await db.query('UPDATE stationary_items SET available_stock = ? WHERE id = ?', [currentAvailable, itemId]);
+                await db.query(
+                    `INSERT INTO stationary_ledger (item_id, transaction_type, received_qty, issued_qty, previous_balance, new_balance, reference_no, user_id, notes)
+                     VALUES (?, 'ISSUED', 0, ?, ?, ?, ?, ?, 'Bulk Approved')`,
+                    [itemId, prevQty, itemData[0].available_stock, currentAvailable, `REQ-#${id}`, request.user_id]
+                );
+                // Low stock check
+                if (currentAvailable < Number(itemData[0].min_stock_limit)) {
+                    await notifyAdmins(`⚠️ Low Stock Alert: "${itemData[0].item_name}" only ${currentAvailable} ${itemData[0].unit} left after bulk approval.`, 'alert');
+                }
+            }
+
+            await db.query(
+                "UPDATE stationary_requests SET status = ?, acted_at = NOW() WHERE id = ?",
+                [status, id]
+            );
+            results.success++;
+        } catch (err) {
+            results.failed++;
+            results.errors.push(`#${id}: ${err.message}`);
+        }
+    }
+
+    res.json({
+        message: `Bulk update done: ${results.success} updated, ${results.failed} failed.`,
+        ...results
+    });
 };

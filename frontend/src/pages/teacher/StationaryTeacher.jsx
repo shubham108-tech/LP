@@ -13,6 +13,8 @@ const StationaryTeacher = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'history'
     const [searchQuery, setSearchQuery] = useState('');
+    const [historySearch, setHistorySearch] = useState('');
+    const [historyStatus, setHistoryStatus] = useState('All');
 
     // Form states
     const [selectedItem, setSelectedItem] = useState('');
@@ -45,6 +47,17 @@ const StationaryTeacher = () => {
             item.category.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [items, searchQuery]);
+
+    const filteredRequests = useMemo(() => {
+        return requests.filter(req => {
+            const matchSearch = !historySearch ||
+                req.item_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                req.category?.toLowerCase().includes(historySearch.toLowerCase()) ||
+                req.reason?.toLowerCase().includes(historySearch.toLowerCase());
+            const matchStatus = historyStatus === 'All' || req.status === historyStatus;
+            return matchSearch && matchStatus;
+        });
+    }, [requests, historySearch, historyStatus]);
 
     useEffect(() => {
         fetchData();
@@ -311,7 +324,32 @@ const StationaryTeacher = () => {
 
                     {/* Requests Table */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h2 className="text-lg font-bold text-slate-800 mb-4">My Requisition History</h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                            <h2 className="text-lg font-bold text-slate-800">My Requisition History</h2>
+                            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:flex-none">
+                                    <RiSearchLine className="absolute left-3 top-2.5 text-slate-400 text-sm" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search item, reason..."
+                                        className="pl-8 pr-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full sm:w-44"
+                                        value={historySearch}
+                                        onChange={e => setHistorySearch(e.target.value)}
+                                    />
+                                </div>
+                                <select
+                                    className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                                    value={historyStatus}
+                                    onChange={e => setHistoryStatus(e.target.value)}
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
+                                    <option value="Returned">Returned</option>
+                                </select>
+                            </div>
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -324,7 +362,7 @@ const StationaryTeacher = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-sm">
-                                    {requests.map(req => (
+                                    {filteredRequests.map(req => (
                                         <tr key={req.id} className="hover:bg-slate-50">
                                             <td className="p-3 text-xs text-slate-600">
                                                 <div className="font-semibold text-slate-800">{new Date(req.requested_at).toLocaleDateString()}</div>
@@ -360,10 +398,10 @@ const StationaryTeacher = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {requests.length === 0 && (
+                                    {filteredRequests.length === 0 && (
                                         <tr>
                                             <td colSpan="5" className="p-8 text-center text-slate-400">
-                                                You haven't submitted any stationary requests yet.
+                                                {requests.length === 0 ? "You haven't submitted any stationary requests yet." : 'No requests match your filter.'}
                                             </td>
                                         </tr>
                                     )}

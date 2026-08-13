@@ -43,6 +43,9 @@ const StationaryAdmin = () => {
     const [ledger, setLedger] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'requests', 'ledger', 'reports'
+  // Bulk selection state for request table
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkStatus, setBulkStatus] = useState('Approved');
 
     // Search & Filter states
     const [inventorySearch, setInventorySearch] = useState('');
@@ -144,6 +147,22 @@ const StationaryAdmin = () => {
             toast.error(error.response?.data?.message || 'Error deleting request');
         }
     };
+
+  // Handler for bulk approve/reject actions
+  const handleBulkAction = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await api.post('/stationary/requests/bulk-update', {
+        ids: selectedIds,
+        status: bulkStatus,
+      });
+      toast.success(`${bulkStatus} applied to ${selectedIds.length} request${selectedIds.length !== 1 ? 's' : ''}`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Bulk action failed');
+    }
+  };
 
     const handleEditRequestSubmit = async (e) => {
         e.preventDefault();
@@ -942,10 +961,39 @@ const StationaryAdmin = () => {
                             generatePDFReport={generatePDFReport}
                         />
                     </div>
+                    {/* Bulk Actions */}
+                    <div className="flex items-center gap-3 mb-4">
+                        <label className="inline-flex items-center space-x-2">
+                            <input type="checkbox" className="form-checkbox h-4 w-4" checked={selectedIds.length === filteredRequests.length && filteredRequests.length > 0} onChange={e => {
+                                if (e.target.checked) setSelectedIds(filteredRequests.map(r => r.id));
+                                else setSelectedIds([]);
+                            }} />
+                            <span className="text-sm font-medium text-slate-700">Select All</span>
+                        </label>
+                        <select
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                            value={bulkStatus}
+                            onChange={e => setBulkStatus(e.target.value)}
+                        >
+                            <option value="Approved">Approve</option>
+                            <option value="Rejected">Reject</option>
+                        </select>
+                        <button
+                            onClick={handleBulkAction}
+                            disabled={selectedIds.length === 0}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-xl disabled:opacity-40"
+                        >
+                            Apply to {selectedIds.length} request{selectedIds.length !== 1 && 's'}
+                        </button>
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b">
+                                    <th className="p-3"><input type="checkbox" className="form-checkbox h-4 w-4" checked={selectedIds.length === filteredRequests.length && filteredRequests.length > 0} onChange={e => {
+                                        if (e.target.checked) setSelectedIds(filteredRequests.map(r => r.id));
+                                        else setSelectedIds([]);
+                                    }} /></th>
                                     <th className="p-3">Req ID & Date</th>
                                     <th className="p-3">User Details</th>
                                     <th className="p-3">Item Requested</th>
@@ -956,8 +1004,12 @@ const StationaryAdmin = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
-                                {requests.map(req => (
+                                {filteredRequests.map(req => (
                                     <tr key={req.id} className="hover:bg-slate-50/80 transition">
+                                        <td className="p-3"><input type="checkbox" className="form-checkbox h-4 w-4" checked={selectedIds.includes(req.id)} onChange={e => {
+                                            if (e.target.checked) setSelectedIds(prev => [...prev, req.id]);
+                                            else setSelectedIds(prev => prev.filter(id => id !== req.id));
+                                        }} /></td>
                                         <td className="p-3">
                                             <div className="font-bold text-slate-800">#REQ-{req.id}</div>
                                             <div className="text-xs text-indigo-700 font-semibold flex items-center gap-1">
@@ -1042,9 +1094,11 @@ const StationaryAdmin = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {requests.length === 0 && (
+                                {filteredRequests.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="p-8 text-center text-slate-400">No requests submitted yet.</td>
+                                        <td colSpan="9" className="p-8 text-center text-slate-400">
+                                            {requests.length === 0 ? "You haven't submitted any stationary requests yet." : 'No requests match your filter.'}
+                                        </td>
                                     </tr>
                                 )}
                             </tbody>
