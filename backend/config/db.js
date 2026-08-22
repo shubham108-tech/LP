@@ -97,9 +97,10 @@ async function initPgSchema() {
                 available_stock INT NOT NULL DEFAULT 0,
                 min_stock_limit INT NOT NULL DEFAULT 5,
                 unit VARCHAR(50) NOT NULL DEFAULT 'pcs',
-                bill_number VARCHAR(100),
+                bill_number TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE stationary_items ALTER COLUMN bill_number TYPE TEXT;
 
             CREATE TABLE IF NOT EXISTS stationary_requests (
             id SERIAL PRIMARY KEY,

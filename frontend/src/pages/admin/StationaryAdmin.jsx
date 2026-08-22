@@ -916,7 +916,20 @@ const StationaryAdmin = () => {
                                                 </div>
                                             </div>
                                             {item.bill_number && (
-                                                <p className="text-xs text-slate-400 mb-2">Bill: <span className="font-medium text-slate-600">{item.bill_number}</span></p>
+                                                <div className="mb-2">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Bill(s):</span>
+                                                        {item.bill_number.split(',').map((bill, i) => (
+                                                            <span 
+                                                                key={i} 
+                                                                className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono text-xs font-bold"
+                                                                title={bill.trim()}
+                                                            >
+                                                                📄 {bill.trim()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
                                             {isLowStock && (
                                                 <span className="text-[11px] bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded border border-rose-200">
@@ -930,7 +943,8 @@ const StationaryAdmin = () => {
                                                 <button
                                                     onClick={() => {
                                                         setAddingStockItem(item);
-                                                        setAddStockBill(item.bill_number || '');
+                                                        setAddStockAmount('');
+                                                        setAddStockBill('');
                                                     }}
                                                     className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold py-2 rounded-xl transition border border-emerald-200"
                                                 >
@@ -1447,21 +1461,96 @@ const StationaryAdmin = () => {
 
             {addingStockItem && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-                        <h3 className="text-lg font-bold mb-2 text-slate-800">Add Stock to Inventory</h3>
-                        <p className="text-xs text-slate-500 mb-4">Adding stock for <strong>{addingStockItem.item_name}</strong>. Current Available: {addingStockItem.available_stock} {addingStockItem.unit}</p>
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <span className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-base">📦</span>
+                                Add Stock to Inventory
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setAddingStockItem(null);
+                                    setAddStockAmount('');
+                                    setAddStockBill('');
+                                }}
+                                className="text-slate-400 hover:text-slate-600 transition text-lg"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <p className="text-xs text-slate-500 mb-3">
+                            Adding stock for <strong className="text-slate-800">{addingStockItem.item_name}</strong>. Current Available: <span className="text-emerald-600 font-extrabold">{addingStockItem.available_stock} {addingStockItem.unit}</span>
+                        </p>
+
+                        {/* Displaying Existing Bill Numbers */}
+                        <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                                Existing Bill / Invoice(s):
+                            </span>
+                            {addingStockItem.bill_number ? (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {addingStockItem.bill_number.split(',').map((b, i) => (
+                                        <span key={i} className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg shadow-sm">
+                                            📄 {b.trim()}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="text-xs text-slate-400 italic">No previous bills recorded</span>
+                            )}
+                        </div>
+
                         <form onSubmit={handleAddStockSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Quantity to Add (+)</label>
-                                <input type="number" className="w-full border rounded-xl p-2.5 text-sm" value={addStockAmount} onChange={e => setAddStockAmount(e.target.value)} required min="1" autoFocus />
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                                    Quantity to Add (+) <span className="text-rose-500">*</span>
+                                </label>
+                                <input 
+                                    type="number" 
+                                    className="w-full border border-slate-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" 
+                                    value={addStockAmount} 
+                                    onChange={e => setAddStockAmount(e.target.value)} 
+                                    required 
+                                    min="1" 
+                                    autoFocus 
+                                    placeholder="e.g. 50" 
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bill / Invoice Number</label>
-                                <input type="text" className="w-full border rounded-xl p-2.5 text-sm" value={addStockBill} onChange={e => setAddStockBill(e.target.value)} placeholder="BILL-2026-XXXX" />
+                                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                                    New Bill / Invoice Number (Optional)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-slate-300 rounded-xl p-2.5 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none" 
+                                    value={addStockBill} 
+                                    onChange={e => setAddStockBill(e.target.value)} 
+                                    placeholder="e.g. BILL-2026-002" 
+                                />
+                                <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-2 font-medium flex items-start gap-1.5">
+                                    <span className="text-sm leading-none">💡</span>
+                                    <span>Purana bill number safe rahega aur naya bill number list me jud jayega.</span>
+                                </div>
                             </div>
-                            <div className="flex justify-end gap-2 mt-6">
-                                <button type="button" onClick={() => setAddingStockItem(null)} className="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm font-bold shadow-md shadow-emerald-600/20">Confirm & Record Ledger</button>
+                            <div className="flex justify-end gap-2 mt-6 pt-2 border-t border-slate-100">
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        setAddingStockItem(null);
+                                        setAddStockAmount('');
+                                        setAddStockBill('');
+                                    }} 
+                                    className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5"
+                                >
+                                    Confirm & Add Stock
+                                </button>
                             </div>
                         </form>
                     </div>
