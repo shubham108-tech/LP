@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const path = require('path'); // ✅ ADDED: React dist serve karne ke liye
 const fs = require('fs');
@@ -20,6 +21,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
+app.use(compression());
 app.set('trust proxy', 1);
 app.disable('etag');
 

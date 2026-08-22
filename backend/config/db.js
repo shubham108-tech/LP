@@ -247,6 +247,21 @@ async function initPgSchema() {
                 is_enabled BOOLEAN DEFAULT TRUE,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- Performance Indexes for Fast Lookups
+            CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+            CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+            CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
+            CREATE INDEX IF NOT EXISTS idx_book_issues_user_id ON book_issues(user_id);
+            CREATE INDEX IF NOT EXISTS idx_book_issues_returned ON book_issues(returned);
+            CREATE INDEX IF NOT EXISTS idx_book_issues_status ON book_issues(status);
+            CREATE INDEX IF NOT EXISTS idx_book_issues_date ON book_issues(issue_date);
+            CREATE INDEX IF NOT EXISTS idx_book_requests_user_id ON book_requests(user_id);
+            CREATE INDEX IF NOT EXISTS idx_book_requests_status ON book_requests(status);
+            CREATE INDEX IF NOT EXISTS idx_stationary_requests_user_id ON stationary_requests(user_id);
+            CREATE INDEX IF NOT EXISTS idx_stationary_requests_status ON stationary_requests(status);
+            CREATE INDEX IF NOT EXISTS idx_stationary_ledger_item_id ON stationary_ledger(item_id);
+            CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);
         `);
 
         // Seed default system modules if not exist

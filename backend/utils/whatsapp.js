@@ -6,10 +6,11 @@ let latestQrRaw = null;
 let latestQrDataUrl = null;
 let isReady = false;
 let isVercel = !!process.env.VERCEL;
+let isDisabled = process.env.DISABLE_WHATSAPP === 'true';
 
 const initWhatsAppClient = () => {
-    if (isVercel) {
-        console.log('ℹ️ Running on Vercel serverless environment. WhatsApp Web local daemon disabled.');
+    if (isVercel || isDisabled) {
+        console.log('ℹ️ WhatsApp Web client disabled or running on serverless environment.');
         return;
     }
 
@@ -29,7 +30,11 @@ const initWhatsAppClient = () => {
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-software-rasterizer',
+                    '--mute-audio',
+                    '--js-flags=--max-old-space-size=128'
                 ]
             }
         });
